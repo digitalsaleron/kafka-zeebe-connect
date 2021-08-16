@@ -1,0 +1,5 @@
+*.classpath
+*.project
+/.settings/
+/kafka-zeebe-connect/.settings/
+/kafka-zeebe-connect/target/

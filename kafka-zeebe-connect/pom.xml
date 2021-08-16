@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<artifactId>kafka-zeebe-connect</artifactId>
+	<packaging>jar</packaging>
+	<name>kafka-zeebe-connect</name>
+	<description>Transactional processor that reads from topic, put into db and write to another topic transactionally
+  </description>
+	<properties>
+		<spring-zeebe-starter.version>1.1.0</spring-zeebe-starter.version>
+	</properties>
+
+	<parent>
+		<groupId>vn.ds.study</groupId>
+		<artifactId>kafka-zeebe-connect-parent</artifactId>
+		<version>0.0.1</version>
+		<relativePath />
+	</parent>
+	<dependencies>
+		<dependency>
+			<groupId>io.camunda</groupId>
+			<artifactId>spring-zeebe-starter</artifactId>
+			<version>${spring-zeebe-starter.version}</version>
+		</dependency>
+	</dependencies>
+</project>
