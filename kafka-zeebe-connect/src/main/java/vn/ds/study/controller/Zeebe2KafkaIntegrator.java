@@ -18,57 +18,51 @@ import vn.ds.study.service.JobService;
 @Component
 public class Zeebe2KafkaIntegrator {
 
-	private static final Logger LOGGER = LoggerFactory
-	        .getLogger(Zeebe2KafkaIntegrator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Zeebe2KafkaIntegrator.class);
 
-	@Autowired
-	private StreamBridge streamBridge;
+    @Autowired
+    private StreamBridge streamBridge;
 
-	@Autowired
-	private JobService jobService;
+    @Autowired
+    private JobService jobService;
 
-	@ZeebeWorker(type = "validatingTickets")
-	public void handleJobFoo(final JobClient client, final ActivatedJob job) {
+    @ZeebeWorker(type = "validatingTickets")
+    public void validatingTickets(final JobClient client, final ActivatedJob job) {
 
-		Map<String, Object> variables = job.getVariablesAsMap();
-		variables.put("isValid", false);
+        Map<String, Object> variables = job.getVariablesAsMap();
 
-		String ticketId = (String) variables.get("ticketId");
-		String type = (String) variables.get("type");
-		int amount = (int) variables.get("amount");
-		int totalCostAmount = (int) variables.get("totalCostAmount");
+        variables.put("isValid", false);
 
-		LOGGER.info("Bridge ticket validation request with id = {}", ticketId);
-		jobService.addJob(
-		        JobInfo.from(job.getProcessInstanceKey(), job.getKey(), job));
-		
-		streamBridge.send("validatingRequests-out-0",
-		        TicketRequest.from(ticketId, type, amount, totalCostAmount));
+        String ticketId = (String) variables.get("ticketId");
+        String type = (String) variables.get("type");
+        int amount = (int) variables.get("amount");
+        int totalCostAmount = (int) variables.get("totalCostAmount");
 
-//		client.newCompleteCommand(job.getKey()).variables(variables).send();
+        LOGGER.info("Bridge ticket validation request with id = {}", ticketId);
+        jobService.addJob(JobInfo.from(ticketId, job.getProcessInstanceKey(), job.getKey(), job));
 
-	}
-	
-	@ZeebeWorker(type = "waitingForApprovalTickets")
-	public void waitingForApprovalTickets(final JobClient client, final ActivatedJob job) {
+        streamBridge.send("validatingRequests-out-0", TicketRequest.from(ticketId, type, amount, totalCostAmount));
+    }
 
-		Map<String, Object> variables = job.getVariablesAsMap();
-		variables.put("isValid", false);
+    @ZeebeWorker(type = "waitingForApprovalTickets")
+    public void waitingForApprovalTickets(final JobClient client, final ActivatedJob job) {
 
-		String ticketId = (String) variables.get("ticketId");
-		String type = (String) variables.get("type");
-		int amount = (int) variables.get("amount");
-		int totalCostAmount = (int) variables.get("totalCostAmount");
+        Map<String, Object> variables = job.getVariablesAsMap();
+        String ticketId = (String) variables.get("ticketId");
+        
+        jobService.addJob(JobInfo.from(ticketId, job.getProcessInstanceKey(), job.getKey(), job));
+        this.streamBridge.send("waitingForApprovalTickets-out-0", variables);
+    }
+    
 
-		LOGGER.info("Bridge ticket validation request with id = {}", ticketId);
-		jobService.addJob(
-		        JobInfo.from(job.getProcessInstanceKey(), job.getKey(), job));
-		
-		streamBridge.send("validatingRequests-out-0",
-		        TicketRequest.from(ticketId, type, amount, totalCostAmount));
+    @ZeebeWorker(type = "approvedTickets")
+    public void approvedTickets(final JobClient client, final ActivatedJob job) {
 
-//		client.newCompleteCommand(job.getKey()).variables(variables).send();
-
-	}
+        Map<String, Object> variables = job.getVariablesAsMap();
+        String ticketId = (String) variables.get("ticketId");
+        
+        jobService.addJob(JobInfo.from(ticketId, job.getProcessInstanceKey(), job.getKey(), job));
+        this.streamBridge.send("approvedTickets-out-0", variables);
+    }
 
 }

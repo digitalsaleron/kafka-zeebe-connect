@@ -1,7 +1,7 @@
 package vn.ds.study.model;
 
 public class TicketRequest {
-	private String id;
+	private String ticketId;
 	private int amount;
 	private int totalCostAmount;
 	private boolean isValid;
@@ -28,10 +28,10 @@ public class TicketRequest {
 		this.isApproved = isApproved;
 	}
 
-	private TicketRequest(String id, String type, int amount,
+	private TicketRequest(String ticketId, String type, int amount,
 	        int totalCostAmount) {
 		super();
-		this.id = id;
+		this.ticketId = ticketId;
 		this.type = type;
 		this.amount = amount;
 		this.totalCostAmount = totalCostAmount;
@@ -58,12 +58,12 @@ public class TicketRequest {
 		this.totalCostAmount = totalCostAmount;
 	}
 
-	public String getId() {
-		return id;
+	public String getTicketId() {
+		return ticketId;
 	}
 
-	public void setId(String id) {
-		this.id = id;
+	public void setTicketId(String id) {
+		this.ticketId = id;
 	}
 
 }

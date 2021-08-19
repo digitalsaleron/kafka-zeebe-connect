@@ -9,8 +9,8 @@ spring:
    application.name: zeebe-kafka-connect
    jmx.enabled: true
    cloud:
+      function.definition: validatingRequests;waitingForApprovalTickets;approvedTickets
       stream:
-         source: validatingRequests
          binders:
             kafka1:
                type: kafka
@@ -29,12 +29,46 @@ spring:
             validatingRequests-in-0:
                binder: kafka1
                destination: ${tenant.prefix}.ticket-validation-responses
+               group: validation
+            waitingForApprovalTickets-out-0:
+               binder: kafka1
+               destination: ${tenant.prefix}.ticket-waiting-approval-requests
+            waitingForApprovalTickets-in-0:
+               binder: kafka1
+               destination: ${tenant.prefix}.ticket-waiting-approval-responses
+               group: waiting-approval
+            approvedTickets-out-0:
+               binder: kafka1
+               destination: ${tenant.prefix}.ticket-resolve-requests
+            approvedTickets-in-0:
+               binder: kafka1
+               destination: ${tenant.prefix}.ticket-resolve-responses
+               group: resolve
+               
          kafka:
             bindings:
                validatingRequests-out-0:
                   producer:
                      topic.properties:
                         retention.ms: 600000
+               validatingRequests-in-0:         
+                  consumer:
+                     configuration:
+                        isolation.level: read_committed
+                        max.poll.records: 5
+                        max.poll.interval.ms: 300000
+               waitingForApprovalTickets-in-0:
+                  consumer:
+                     configuration:
+                        isolation.level: read_committed
+                        max.poll.records: 5
+                        max.poll.interval.ms: 300000
+               approvedTickets-in-0:
+                  consumer:
+                     configuration:
+                        isolation.level: read_committed
+                        max.poll.records: 5
+                        max.poll.interval.ms: 300000
             binder:
                transaction:
                   transaction-id-prefix: approval-
@@ -91,7 +125,7 @@ camunda.bpm.client:
          variable-names: type,amount,totalCostAmount,isValid,isApproved
          process-definition-key: TicketApprovalProcess
 zeebe.client:
-   broker.gatewayAddress: 192.168.56.4:26500
+   broker.gatewayAddress: 10.10.15.219:8080
    security.plaintext: true
    worker:
       maxJobsActive: 1

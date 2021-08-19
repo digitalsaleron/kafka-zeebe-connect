@@ -29,15 +29,13 @@ import io.camunda.zeebe.spring.client.EnableZeebeClient;
 @EnableScheduling
 public class KafkaZeebeConnect {
 
-	private static final Logger logger = LoggerFactory
+	private static final Logger LOGGER = LoggerFactory
 	        .getLogger(KafkaZeebeConnect.class);
 
 	public static void main(String[] args) {
 		int port = SocketUtils.findAvailableTcpPort(8000, 10000);
 		System.setProperty("server.port", String.valueOf(port));
-		logger.info("Random Server Port is set to {}.", port);
+		LOGGER.info("Random Server Port is set to {}.", port);
 		SpringApplication.run(KafkaZeebeConnect.class, args);
 	}
-
-	
 }

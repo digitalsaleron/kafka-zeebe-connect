@@ -7,4 +7,6 @@ public interface JobService {
 	void addJob(JobInfo job);
 
 	JobInfo next();
+	
+	JobInfo find(String ticketId);
 }
