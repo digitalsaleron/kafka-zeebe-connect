@@ -6,11 +6,11 @@ spring:
       instance:
          service-base-url: http://localhost:${server.port}/
          prefer-ip: false
-   application.name: zeebe-ticket-service
+   application.name: zeebe-kafka-connect
    jmx.enabled: true
    cloud:
-      function.definition: process
       stream:
+         source: validatingRequests
          binders:
             kafka1:
                type: kafka
@@ -23,24 +23,15 @@ spring:
                                  brokers: ${bootstrap.server}
          bindings:
             applicationMetrics.destination: ${tenant.prefix}.process-metrics
-            process-in-0:
+            validatingRequests-out-0:
                binder: kafka1
-               destination: ${tenant.prefix}.ticket-approval-requests
-               group: extraction
-               consumer:
-                  maxAttempts: 1
-            process-out-0:
+               destination: ${tenant.prefix}.ticket-validation-requests
+            validatingRequests-in-0:
                binder: kafka1
-               destination: ${tenant.prefix}.ticket-approval-responses
+               destination: ${tenant.prefix}.ticket-validation-responses
          kafka:
             bindings:
-               process-in-0:
-                  consumer:
-                     configuration:
-                        isolation.level: read_committed
-                        max.poll.records: 5
-                        max.poll.interval.ms: 300000
-               process-out-0:
+               validatingRequests-out-0:
                   producer:
                      topic.properties:
                         retention.ms: 600000
@@ -53,18 +44,6 @@ spring:
                         retries: 1
                         acks: all
                         enable.idempotence: true
-   datasource:
-      url: jdbc:h2:./data/sample_mysql_db
-      username: root
-      password: admin
-      driver-class-name: org.h2.Driver
-      platform: h2
-   h2.console:
-      enabled: true
-      path: /h2-console
-   jpa:
-      hibernate:
-         ddl-auto: update
 logging:
    file:
       name: ./logs/${spring.application.name}.log

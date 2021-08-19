@@ -8,4 +8,7 @@ public interface TicketService {
 	boolean approve(TicketRequest ticket);
 
 	ResolvedTicketResult resolve(TicketRequest ticket);
+
+	boolean validate(TicketRequest request);
+
 }
