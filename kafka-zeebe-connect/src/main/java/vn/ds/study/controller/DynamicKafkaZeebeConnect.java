@@ -1,24 +1,45 @@
 package vn.ds.study.controller;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
+import org.springframework.cloud.stream.binding.BindingService;
+import org.springframework.cloud.stream.config.BindingProperties;
+import org.springframework.cloud.stream.config.BindingServiceProperties;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.SubscribableChannel;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.ZeebeWorker;
 import vn.ds.study.model.JobInfo;
-import vn.ds.study.model.TicketRequest;
 import vn.ds.study.service.JobService;
 
 @Component
-public class Zeebe2KafkaIntegrator {
+public class DynamicKafkaZeebeConnect {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(Zeebe2KafkaIntegrator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DynamicKafkaZeebeConnect.class);
 
     @Autowired
     private StreamBridge streamBridge;
@@ -26,43 +47,88 @@ public class Zeebe2KafkaIntegrator {
     @Autowired
     private JobService jobService;
 
-    @ZeebeWorker(type = "validatingTickets")
-    public void validatingTickets(final JobClient client, final ActivatedJob job) {
+    @Autowired
+    private BindingService bindingService;
 
-        Map<String, Object> variables = job.getVariablesAsMap();
+    @Autowired
+    private ConfigurableListableBeanFactory beanFactory;
 
-        variables.put("isValid", false);
+    @Autowired
+    private AbstractBindingTargetFactory<? extends MessageChannel> bindingTargetFactory;
 
-        String ticketId = (String) variables.get("ticketId");
-        String type = (String) variables.get("type");
-        int amount = (int) variables.get("amount");
-        int totalCostAmount = (int) variables.get("totalCostAmount");
+    @Autowired
+    private ZeebeClient client;
 
-        LOGGER.info("Bridge ticket validation request with id = {}", ticketId);
-        jobService.addJob(JobInfo.from(ticketId, job.getProcessInstanceKey(), job.getKey(), job));
+    @Autowired
+    private ObjectMapper objectMapper;
 
-        streamBridge.send("validatingRequests-out-0", TicketRequest.from(ticketId, type, amount, totalCostAmount));
-    }
+    private Map<String, Object> createdDynamicConsumer = new ConcurrentHashMap<>();
 
-    @ZeebeWorker(type = "waitingForApprovalTickets")
-    public void waitingForApprovalTickets(final JobClient client, final ActivatedJob job) {
-
-        Map<String, Object> variables = job.getVariablesAsMap();
-        String ticketId = (String) variables.get("ticketId");
-        
-        jobService.addJob(JobInfo.from(ticketId, job.getProcessInstanceKey(), job.getKey(), job));
-        this.streamBridge.send("waitingForApprovalTickets-out-0", variables);
-    }
-    
-
-    @ZeebeWorker(type = "approvedTickets")
-    public void approvedTickets(final JobClient client, final ActivatedJob job) {
+    @ZeebeWorker(type = "ticketProcessing")
+    public void ticketProcessing(final JobClient client, final ActivatedJob job) {
 
         Map<String, Object> variables = job.getVariablesAsMap();
         String ticketId = (String) variables.get("ticketId");
-        
+        String prefixTopic = job.getElementId();
+        String topic = prefixTopic + "-requests";
         jobService.addJob(JobInfo.from(ticketId, job.getProcessInstanceKey(), job.getKey(), job));
-        this.streamBridge.send("approvedTickets-out-0", variables);
+
+        if(!createdDynamicConsumer.containsKey(prefixTopic)) {
+            this.createDynamicConsumer(prefixTopic);
+            this.createdDynamicConsumer.put(prefixTopic, prefixTopic);
+        }
+        streamBridge.send(topic, variables);
     }
 
+    @PostConstruct
+    void init() {
+    }
+
+    void createDynamicConsumer(String prefixTopic) {
+
+        String topic = prefixTopic + "-responses";
+        String consumerGroup = prefixTopic;
+        String consumerName = prefixTopic;
+
+        ConsumerProperties consumerProperties = new ConsumerProperties();
+        consumerProperties.setMaxAttempts(1);
+        BindingProperties bindingProperties = new BindingProperties();
+        bindingProperties.setConsumer(consumerProperties);
+        bindingProperties.setDestination(topic);
+        bindingProperties.setGroup(consumerGroup);
+
+        BindingServiceProperties bindingServiceProperties = this.bindingService.getBindingServiceProperties();
+
+        bindingServiceProperties.getBindings().put(consumerName, bindingProperties);
+        SubscribableChannel channel = (SubscribableChannel) bindingTargetFactory.createInput(consumerName);
+        beanFactory.registerSingleton(consumerName, channel);
+        channel = (SubscribableChannel) beanFactory.initializeBean(channel, consumerName);
+        bindingService.bindConsumer(channel, consumerName);
+        channel.subscribe(new DynamicConsumerHandler());
+    }
+
+    class DynamicConsumerHandler implements MessageHandler {
+
+        @Override
+        public void handleMessage(Message<?> message) {
+            final ObjectReader reader = objectMapper.reader();
+            JsonNode newNode;
+            try {
+                newNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
+                ObjectNode objectNode = (ObjectNode) newNode;
+                String ticketId = objectNode.get("ticketId").asText();
+
+                JobInfo jobI = jobService.find(ticketId);
+                ActivatedJob job = jobI.getActivatedJob();
+
+                Map<String, Object> variables = objectMapper.convertValue(objectNode,
+                    new TypeReference<Map<String, Object>>() {
+                    });
+
+                client.newCompleteCommand(job.getKey()).variables(variables).send();
+            } catch (IOException e) {
+                LOGGER.error("", e);
+            }
+        }
+    }
 }

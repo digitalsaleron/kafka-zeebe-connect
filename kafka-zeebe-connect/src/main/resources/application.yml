@@ -89,7 +89,7 @@ logging:
       rolling-file-name: ./logs/${spring.application.name}-%d{yyyy-MM-dd}.%i.log
    level:
       org.apache.kafka.clients: info
-      org.camunda.bpm.client: info
+      io.camunda.zeebe.client: trace
 management:
    metrics:
       export:

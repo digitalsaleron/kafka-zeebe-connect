@@ -27,7 +27,7 @@ public class Kafka2ZeebeIntegrator {
 
     @Autowired
     private JobService jobService;
-
+    
     @Bean
     Consumer<JsonNode> validatingRequests() {
         return data -> {
