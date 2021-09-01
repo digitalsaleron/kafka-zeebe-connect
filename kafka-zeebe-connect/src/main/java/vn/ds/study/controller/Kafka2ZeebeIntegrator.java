@@ -17,7 +17,6 @@ import io.camunda.zeebe.client.api.response.ActivatedJob;
 import vn.ds.study.model.JobInfo;
 import vn.ds.study.service.JobService;
 
-@Configuration
 public class Kafka2ZeebeIntegrator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Kafka2ZeebeIntegrator.class);
@@ -28,7 +27,6 @@ public class Kafka2ZeebeIntegrator {
     @Autowired
     private JobService jobService;
     
-    @Bean
     Consumer<JsonNode> validatingRequests() {
         return data -> {
             ObjectNode objectNode = ((ObjectNode) data);
@@ -46,7 +44,6 @@ public class Kafka2ZeebeIntegrator {
         };
     }
 
-    @Bean
     Consumer<JsonNode> waitingForApprovalTickets() {
         return data -> {
             ObjectNode objectNode = ((ObjectNode) data);
@@ -64,7 +61,6 @@ public class Kafka2ZeebeIntegrator {
         };
     }
 
-    @Bean
     Consumer<JsonNode> approvedTickets() {
         return data -> {
             ObjectNode objectNode = ((ObjectNode) data);

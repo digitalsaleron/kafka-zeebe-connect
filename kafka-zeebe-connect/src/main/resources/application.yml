@@ -30,21 +30,6 @@ spring:
                binder: kafka1
                destination: ${tenant.prefix}.ticket-validation-responses
                group: validation
-            waitingForApprovalTickets-out-0:
-               binder: kafka1
-               destination: ${tenant.prefix}.ticket-waiting-approval-requests
-            waitingForApprovalTickets-in-0:
-               binder: kafka1
-               destination: ${tenant.prefix}.ticket-waiting-approval-responses
-               group: waiting-approval
-            approvedTickets-out-0:
-               binder: kafka1
-               destination: ${tenant.prefix}.ticket-resolve-requests
-            approvedTickets-in-0:
-               binder: kafka1
-               destination: ${tenant.prefix}.ticket-resolve-responses
-               group: resolve
-               
          kafka:
             bindings:
                validatingRequests-out-0:
@@ -57,21 +42,16 @@ spring:
                         isolation.level: read_committed
                         max.poll.records: 5
                         max.poll.interval.ms: 300000
-               waitingForApprovalTickets-in-0:
+               ticket-validation-in-0:
                   consumer:
                      configuration:
                         isolation.level: read_committed
                         max.poll.records: 5
-                        max.poll.interval.ms: 300000
-               approvedTickets-in-0:
-                  consumer:
-                     configuration:
-                        isolation.level: read_committed
-                        max.poll.records: 5
-                        max.poll.interval.ms: 300000
+                        max.poll.interval.ms: 10
+                        session.timeout.ms: 10
             binder:
                consumerProperties:
-                  topic.suffix: -reponses
+                  topic.suffix: -responses
                producerProperties:
                   topic.suffix: -requests
                transaction:

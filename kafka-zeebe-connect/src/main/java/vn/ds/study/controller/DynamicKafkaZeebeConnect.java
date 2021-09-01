@@ -11,8 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.kafka.properties.KafkaExtendedBindingProperties;
 import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
 import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.cloud.stream.config.BindingProperties;
@@ -38,6 +40,7 @@ import vn.ds.study.model.JobInfo;
 import vn.ds.study.service.JobService;
 
 @Component
+@EnableConfigurationProperties(KafkaBinderConfigurationProperties.class)
 public class DynamicKafkaZeebeConnect {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicKafkaZeebeConnect.class);
@@ -63,6 +66,9 @@ public class DynamicKafkaZeebeConnect {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private KafkaBinderConfigurationProperties binderConfigurationProperties;
+    
     private Map<String, Object> createdDynamicConsumer = new ConcurrentHashMap<>();
 
     public DynamicKafkaZeebeConnect() {
@@ -71,10 +77,10 @@ public class DynamicKafkaZeebeConnect {
     
     @PostConstruct
     void post() {
-        System.out.println();
+        System.out.println(binderConfigurationProperties);
     }
 
-    //    @ZeebeWorker(type = "ticketProcessing")
+//    @ZeebeWorker(type = "ticketProcessing")
     public void ticketProcessing(final JobClient client, final ActivatedJob job) {
 
         Map<String, Object> variables = job.getVariablesAsMap();
@@ -94,7 +100,7 @@ public class DynamicKafkaZeebeConnect {
 
         String topic = prefixTopic + "-responses";
         String consumerGroup = prefixTopic;
-        String consumerName = prefixTopic;
+        String consumerName = prefixTopic + "-in-0";
 
         ConsumerProperties consumerProperties = new ConsumerProperties();
         consumerProperties.setMaxAttempts(1);
@@ -106,10 +112,13 @@ public class DynamicKafkaZeebeConnect {
         BindingServiceProperties bindingServiceProperties = this.bindingService.getBindingServiceProperties();
 
         bindingServiceProperties.getBindings().put(consumerName, bindingProperties);
+        
         SubscribableChannel channel = (SubscribableChannel) bindingTargetFactory.createInput(consumerName);
         beanFactory.registerSingleton(consumerName, channel);
         channel = (SubscribableChannel) beanFactory.initializeBean(channel, consumerName);
+        
         bindingService.bindConsumer(channel, consumerName);
+        
         channel.subscribe(new DynamicConsumerHandler());
     }
 
@@ -130,9 +139,9 @@ public class DynamicKafkaZeebeConnect {
                 Map<String, Object> variables = objectMapper.convertValue(objectNode,
                     new TypeReference<Map<String, Object>>() {
                     });
-
+                Thread.sleep(5000);
                 client.newCompleteCommand(job.getKey()).variables(variables).send();
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 LOGGER.error("", e);
             }
         }

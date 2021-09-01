@@ -13,32 +13,29 @@
 package vn.ds.study.infrastructure.configuration;
 
 import java.time.Duration;
-import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Configuration;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.ZeebeClientBuilder;
-import io.camunda.zeebe.client.api.response.ActivatedJob;
-import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.client.api.worker.JobHandler;
 import io.camunda.zeebe.client.api.worker.JobWorker;
 import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3;
 import io.camunda.zeebe.client.impl.command.ArgumentUtil;
 import io.camunda.zeebe.spring.client.properties.ZeebeClientConfigurationProperties;
+import vn.ds.study.application.handler.KafkaConnectJobHandler;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.PollerProperties;
-import vn.ds.study.infrastructure.properties.TopicProperties;
-import vn.ds.study.model.JobInfo;
 
 @Configuration
-@EnableConfigurationProperties(value = { PollerProperties.class, TopicProperties.class })
+@EnableConfigurationProperties(value = { PollerProperties.class, KafkaBinderConfigurationProperties.class})
 public class PollerConfiguration {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(PollerConfiguration.class);
@@ -47,8 +44,6 @@ public class PollerConfiguration {
 
     private PollerProperties pollerProperties;
 
-    private TopicProperties topicProperties;
-    
     private JobRepository jobRepository;
     
     private ZeebeClient zeebeClient;
@@ -56,17 +51,19 @@ public class PollerConfiguration {
     private ZeebeClientBuilder zeebeClientBuilder;
     
     private StreamBridge streamBridge;
+    
+    private KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties;
 
     public PollerConfiguration(ZeebeClientConfigurationProperties zeebeClientProperties,
-            PollerProperties pollerProperties, TopicProperties topicProperties, JobRepository jobRepository,
-            ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge) {
+            PollerProperties pollerProperties, KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties,
+            JobRepository jobRepository, ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge) {
         super();
         this.zeebeClientProperties = zeebeClientProperties;
         this.pollerProperties = pollerProperties;
-        this.topicProperties = topicProperties;
         this.jobRepository = jobRepository;
         this.zeebeClientBuilder = zeebeClientBuilder;
         this.streamBridge = streamBridge;
+        this.kafkaBinderConfigurationProperties = kafkaBinderConfigurationProperties;
         this.zeebeClient = this.zeebeClientBuilder.build();
     }
 
@@ -75,12 +72,15 @@ public class PollerConfiguration {
         ArgumentUtil.ensureNotNullNorEmpty("jobType", pollerProperties.getJobType());
         ArgumentUtil.ensureNotNullNorEmpty("correlationKey", pollerProperties.getCorrelationKey());
         ArgumentUtil.ensureNotNullNorEmpty("consumerProperties.topic.suffix",
-            topicProperties.getConsumerProperties().get("topic.suffix"));
+            kafkaBinderConfigurationProperties.getConsumerProperties().get("topic.suffix"));
 
         int numberOfThread = this.zeebeClientProperties.getWorker().getThreads();
+        
+        final JobHandler jobHandler = new KafkaConnectJobHandler(kafkaBinderConfigurationProperties, pollerProperties,
+            streamBridge, jobRepository);
 
         for (int thread = 0; thread < numberOfThread; thread++) {
-            createJobWorker(this.pollerProperties.getJobType(), new DynamicJobHandler());
+            createJobWorker(this.pollerProperties.getJobType(), jobHandler);
         }
     }
     
@@ -104,22 +104,5 @@ public class PollerConfiguration {
         final JobWorker jobWorker = builder.open();
 
         LOGGER.info("Register job worker: {}", jobWorker);
-    }
-
-    class DynamicJobHandler implements JobHandler {
-
-        @Override
-        public void handle(final JobClient client, final ActivatedJob job) throws Exception {
-            final Map<String, Object> variablesAsMap = job.getVariablesAsMap();
-
-            final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
-            final String prefixTopic = job.getElementId();
-            final String suffixTopic = topicProperties.getConsumerProperties().get("topic.suffix");
-            final String topicName = new StringBuilder().append(prefixTopic).append(suffixTopic).toString();
-
-            jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
-            
-            streamBridge.send(topicName, variablesAsMap);
-        }
     }
 }
