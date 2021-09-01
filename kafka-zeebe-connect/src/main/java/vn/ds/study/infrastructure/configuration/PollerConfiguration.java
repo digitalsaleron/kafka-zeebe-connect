@@ -31,6 +31,7 @@ import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilder
 import io.camunda.zeebe.client.impl.command.ArgumentUtil;
 import io.camunda.zeebe.spring.client.properties.ZeebeClientConfigurationProperties;
 import vn.ds.study.application.handler.KafkaConnectJobHandler;
+import vn.ds.study.infrastructure.persistence.ConsumerRepository;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.PollerProperties;
 
@@ -45,6 +46,8 @@ public class PollerConfiguration {
     private PollerProperties pollerProperties;
 
     private JobRepository jobRepository;
+
+    private ConsumerRepository consumerRepository;
     
     private ZeebeClient zeebeClient;
     
@@ -56,7 +59,7 @@ public class PollerConfiguration {
 
     public PollerConfiguration(ZeebeClientConfigurationProperties zeebeClientProperties,
             PollerProperties pollerProperties, KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties,
-            JobRepository jobRepository, ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge) {
+            JobRepository jobRepository, ConsumerRepository consumerRepository,ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge) {
         super();
         this.zeebeClientProperties = zeebeClientProperties;
         this.pollerProperties = pollerProperties;
@@ -64,6 +67,7 @@ public class PollerConfiguration {
         this.zeebeClientBuilder = zeebeClientBuilder;
         this.streamBridge = streamBridge;
         this.kafkaBinderConfigurationProperties = kafkaBinderConfigurationProperties;
+        this.consumerRepository = consumerRepository;
         this.zeebeClient = this.zeebeClientBuilder.build();
     }
 
@@ -77,7 +81,7 @@ public class PollerConfiguration {
         int numberOfThread = this.zeebeClientProperties.getWorker().getThreads();
         
         final JobHandler jobHandler = new KafkaConnectJobHandler(kafkaBinderConfigurationProperties, pollerProperties,
-            streamBridge, jobRepository);
+            streamBridge, jobRepository, consumerRepository);
 
         for (int thread = 0; thread < numberOfThread; thread++) {
             createJobWorker(this.pollerProperties.getJobType(), jobHandler);
