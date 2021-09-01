@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
+import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
 import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
 import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.cloud.stream.config.BindingProperties;
@@ -63,8 +64,8 @@ public class DynamicKafkaZeebeConnect {
     private ObjectMapper objectMapper;
 
     private Map<String, Object> createdDynamicConsumer = new ConcurrentHashMap<>();
-
-    @ZeebeWorker(type = "ticketProcessing")
+    
+//    @ZeebeWorker(type = "ticketProcessing")
     public void ticketProcessing(final JobClient client, final ActivatedJob job) {
 
         Map<String, Object> variables = job.getVariablesAsMap();
@@ -78,10 +79,6 @@ public class DynamicKafkaZeebeConnect {
             this.createdDynamicConsumer.put(prefixTopic, prefixTopic);
         }
         streamBridge.send(topic, variables);
-    }
-
-    @PostConstruct
-    void init() {
     }
 
     void createDynamicConsumer(String prefixTopic) {
