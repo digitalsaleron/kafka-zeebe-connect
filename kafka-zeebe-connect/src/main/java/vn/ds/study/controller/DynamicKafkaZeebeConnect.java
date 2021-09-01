@@ -64,8 +64,17 @@ public class DynamicKafkaZeebeConnect {
     private ObjectMapper objectMapper;
 
     private Map<String, Object> createdDynamicConsumer = new ConcurrentHashMap<>();
+
+    public DynamicKafkaZeebeConnect() {
+        System.out.println("...");
+    }
     
-//    @ZeebeWorker(type = "ticketProcessing")
+    @PostConstruct
+    void post() {
+        System.out.println();
+    }
+
+    //    @ZeebeWorker(type = "ticketProcessing")
     public void ticketProcessing(final JobClient client, final ActivatedJob job) {
 
         Map<String, Object> variables = job.getVariablesAsMap();
@@ -74,7 +83,7 @@ public class DynamicKafkaZeebeConnect {
         String topic = prefixTopic + "-requests";
         jobService.addJob(JobInfo.from(ticketId, job.getProcessInstanceKey(), job.getKey(), job));
 
-        if(!createdDynamicConsumer.containsKey(prefixTopic)) {
+        if (!createdDynamicConsumer.containsKey(prefixTopic)) {
             this.createDynamicConsumer(prefixTopic);
             this.createdDynamicConsumer.put(prefixTopic, prefixTopic);
         }

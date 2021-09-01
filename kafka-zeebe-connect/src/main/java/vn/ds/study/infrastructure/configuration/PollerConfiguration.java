@@ -24,6 +24,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Configuration;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.ZeebeClientBuilder;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.client.api.worker.JobHandler;
@@ -52,18 +53,21 @@ public class PollerConfiguration {
     
     private ZeebeClient zeebeClient;
     
-    private StreamBridge streamBridge;
+    private ZeebeClientBuilder zeebeClientBuilder;
     
+    private StreamBridge streamBridge;
+
     public PollerConfiguration(ZeebeClientConfigurationProperties zeebeClientProperties,
             PollerProperties pollerProperties, TopicProperties topicProperties, JobRepository jobRepository,
-            ZeebeClient zeebeClient, StreamBridge streamBridge) {
+            ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge) {
         super();
         this.zeebeClientProperties = zeebeClientProperties;
         this.pollerProperties = pollerProperties;
         this.topicProperties = topicProperties;
         this.jobRepository = jobRepository;
-        this.zeebeClient = zeebeClient;
+        this.zeebeClientBuilder = zeebeClientBuilder;
         this.streamBridge = streamBridge;
+        this.zeebeClient = this.zeebeClientBuilder.build();
     }
 
     @PostConstruct
@@ -88,7 +92,8 @@ public class PollerConfiguration {
         final Duration pollInterval = this.zeebeClientProperties.getJob().getPollInterval();
         final Duration requestTimeout = this.zeebeClientProperties.getRequestTimeout();
         
-        final JobWorkerBuilderStep3 builder = zeebeClient.newWorker()
+        final JobWorkerBuilderStep3 builder = this.zeebeClient
+                .newWorker()
                 .jobType(jobType)
                 .handler(jobHandler)
                 .name(name)

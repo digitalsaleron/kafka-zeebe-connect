@@ -133,7 +133,7 @@ zeebe.client:
    security.plaintext: true
    worker:
       maxJobsActive: 1
-      threads: 1
+      threads: 5
    poller:
       correlationKey: ticketId   
       jobType: ticketProcessing
