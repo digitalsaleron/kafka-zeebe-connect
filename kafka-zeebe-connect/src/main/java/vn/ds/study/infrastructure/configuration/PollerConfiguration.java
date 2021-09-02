@@ -13,27 +13,39 @@
 package vn.ds.study.infrastructure.configuration;
 
 import java.time.Duration;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
+import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
+import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.ZeebeClientBuilder;
+import io.camunda.zeebe.client.api.response.ActivatedJob;
+import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.client.api.worker.JobHandler;
 import io.camunda.zeebe.client.api.worker.JobWorker;
 import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3;
 import io.camunda.zeebe.client.impl.command.ArgumentUtil;
 import io.camunda.zeebe.spring.client.properties.ZeebeClientConfigurationProperties;
-import vn.ds.study.application.handler.KafkaConnectJobHandler;
+import vn.ds.study.application.builder.ConsumerBuilder;
+import vn.ds.study.application.handler.ConsumerMessageHandler;
 import vn.ds.study.infrastructure.persistence.ConsumerRepository;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.PollerProperties;
+import vn.ds.study.model.JobInfo;
 
 @Configuration
 @EnableConfigurationProperties(value = { PollerProperties.class, KafkaBinderConfigurationProperties.class})
@@ -56,18 +68,33 @@ public class PollerConfiguration {
     private StreamBridge streamBridge;
     
     private KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties;
+    
+    private ObjectMapper objectMapper;
+    
+    private ConfigurableListableBeanFactory beanFactory;
+
+    private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
+    
+    private BindingService bindingService;
 
     public PollerConfiguration(ZeebeClientConfigurationProperties zeebeClientProperties,
-            PollerProperties pollerProperties, KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties,
-            JobRepository jobRepository, ConsumerRepository consumerRepository,ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge) {
+            PollerProperties pollerProperties, JobRepository jobRepository, ConsumerRepository consumerRepository,
+            ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge,
+            KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties, ObjectMapper objectMapper,
+            ConfigurableListableBeanFactory beanFactory,
+            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService) {
         super();
         this.zeebeClientProperties = zeebeClientProperties;
         this.pollerProperties = pollerProperties;
         this.jobRepository = jobRepository;
+        this.consumerRepository = consumerRepository;
         this.zeebeClientBuilder = zeebeClientBuilder;
         this.streamBridge = streamBridge;
         this.kafkaBinderConfigurationProperties = kafkaBinderConfigurationProperties;
-        this.consumerRepository = consumerRepository;
+        this.objectMapper = objectMapper;
+        this.beanFactory = beanFactory;
+        this.targetFactory = targetFactory;
+        this.bindingService = bindingService;
         this.zeebeClient = this.zeebeClientBuilder.build();
     }
 
@@ -79,12 +106,9 @@ public class PollerConfiguration {
             kafkaBinderConfigurationProperties.getConsumerProperties().get("topic.suffix"));
 
         int numberOfThread = this.zeebeClientProperties.getWorker().getThreads();
-        
-        final JobHandler jobHandler = new KafkaConnectJobHandler(kafkaBinderConfigurationProperties, pollerProperties,
-            streamBridge, jobRepository, consumerRepository);
 
         for (int thread = 0; thread < numberOfThread; thread++) {
-            createJobWorker(this.pollerProperties.getJobType(), jobHandler);
+            createJobWorker(this.pollerProperties.getJobType(), new KafkaConnectJobHandler());
         }
     }
     
@@ -108,5 +132,31 @@ public class PollerConfiguration {
         final JobWorker jobWorker = builder.open();
 
         LOGGER.info("Register job worker: {}", jobWorker);
+    }
+    
+    class KafkaConnectJobHandler implements JobHandler {
+
+        @Override
+        public void handle(final JobClient client, final ActivatedJob job) throws Exception {
+            final Map<String, Object> variablesAsMap = job.getVariablesAsMap();
+
+            final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
+            final String topicPrefix = job.getElementId();
+            final String producerTopicSuffix = kafkaBinderConfigurationProperties.getProducerProperties().get("topic.suffix");
+            final String consumerTopicSuffix = kafkaBinderConfigurationProperties.getConsumerProperties().get("topic.suffix");
+            final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
+
+            jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
+
+            if (!consumerRepository.containConsumer(topicPrefix)) {
+                
+                consumerRepository.addConsumer(topicPrefix);
+                final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper, zeebeClient);
+                
+                ConsumerBuilder.prepare(beanFactory, targetFactory, bindingService, messageHandler,
+                    topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
+            }
+            streamBridge.send(topicName, variablesAsMap);
+        }
     }
 }

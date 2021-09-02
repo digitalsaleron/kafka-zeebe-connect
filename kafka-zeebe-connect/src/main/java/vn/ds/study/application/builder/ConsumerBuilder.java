@@ -63,7 +63,7 @@ public class ConsumerBuilder {
         return (new ConsumerBuilder()).new ConsumerBuilder2(beanFactory, targetFactory, bindingService, messageHandler, topicPrefix);
     }
 
-    class ConsumerBuilder2 {
+    public class ConsumerBuilder2 {
 
         private ConsumerBuilder consumerBuilder;
 
