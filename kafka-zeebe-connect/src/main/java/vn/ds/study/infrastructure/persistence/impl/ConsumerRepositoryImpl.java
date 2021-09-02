@@ -23,21 +23,16 @@ import vn.ds.study.infrastructure.persistence.ConsumerRepository;
 public class ConsumerRepositoryImpl implements ConsumerRepository{
 
     private Map<String, String> store = new ConcurrentHashMap<>();
-    
-    @Override
-    public void addConsumer(String consumerName) {
-        this.store.put(consumerName, consumerName);
-    }
-
-    @Override
-    public boolean containConsumer(String consumerName) {
-        return this.store.containsKey(consumerName);
-    }
 
     @Override
     public synchronized boolean addConsumerIfAbsent(String consumerName) {
         boolean result = this.store.containsKey(consumerName);
         this.store.putIfAbsent(consumerName, consumerName);
         return result;
+    }
+
+    @Override
+    public String removeConsumer(String consumerName) {
+        return this.store.remove(consumerName);
     }
 }

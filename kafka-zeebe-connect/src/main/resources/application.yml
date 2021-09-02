@@ -47,8 +47,7 @@ spring:
                      configuration:
                         isolation.level: read_committed
                         max.poll.records: 5
-                        max.poll.interval.ms: 10
-                        session.timeout.ms: 10
+                        max.poll.interval.ms: 300000
             binder:
                consumerProperties:
                   topic.suffix: -responses
@@ -113,7 +112,7 @@ zeebe.client:
    security.plaintext: true
    worker:
       maxJobsActive: 1
-      threads: 5
+      threads: 1
    poller:
       correlationKey: ticketId   
       jobType: ticketProcessing

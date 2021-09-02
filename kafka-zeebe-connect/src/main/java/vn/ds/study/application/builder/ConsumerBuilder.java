@@ -12,7 +12,6 @@
  */
 package vn.ds.study.application.builder;
 
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
 import org.springframework.cloud.stream.binding.BindingService;
@@ -28,8 +27,6 @@ public class ConsumerBuilder {
     private static final String TOPIC_SUFFIX_DEFAULT = "-response";
     
     private static final String CONSUMER_NAME_SUFFIX_DEFAULT = "-in-0";
-    
-    private ConfigurableListableBeanFactory configurableListableBeanFactory;
 
     private AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory;
 
@@ -42,25 +39,22 @@ public class ConsumerBuilder {
     private ConsumerBuilder() {
     }
 
-    private ConsumerBuilder(ConfigurableListableBeanFactory beanFactory,
-            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory,
-            BindingService bindingService, String topicPrefix, MessageHandler messageHandler) {
+    public ConsumerBuilder(AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
+            BindingService bindingService, MessageHandler messageHandler, String topicPrefix) {
         super();
-        this.configurableListableBeanFactory = beanFactory;
-        this.abstractBindingTargetFactory = targetFactory;
+        this.abstractBindingTargetFactory = abstractBindingTargetFactory;
         this.bindingService = bindingService;
-        this.topicPrefix = topicPrefix;
         this.messageHandler = messageHandler;
+        this.topicPrefix = topicPrefix;
     }
 
     public static ConsumerBuilder2 prepare(
-        ConfigurableListableBeanFactory beanFactory,
         AbstractBindingTargetFactory<? extends MessageChannel> targetFactory,
         BindingService bindingService,
         MessageHandler messageHandler,
         String topicPrefix) {
 
-        return (new ConsumerBuilder()).new ConsumerBuilder2(beanFactory, targetFactory, bindingService, messageHandler, topicPrefix);
+        return (new ConsumerBuilder()).new ConsumerBuilder2(targetFactory, bindingService, messageHandler, topicPrefix);
     }
 
     public class ConsumerBuilder2 {
@@ -73,11 +67,10 @@ public class ConsumerBuilder {
         
         private String consumerNameSuffix;
         
-        ConsumerBuilder2(ConfigurableListableBeanFactory beanFactory,
-                AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
+        ConsumerBuilder2(AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
                 BindingService bindingService, MessageHandler messageHandler, String topicPrefix) {
-            this.consumerBuilder = new ConsumerBuilder(beanFactory, abstractBindingTargetFactory,
-                bindingService, topicPrefix, messageHandler);
+            this.consumerBuilder = new ConsumerBuilder(abstractBindingTargetFactory, bindingService, messageHandler,
+                topicPrefix);
         }
 
         public ConsumerBuilder2 setTopicSuffix(String topicSuffix) {
@@ -103,7 +96,6 @@ public class ConsumerBuilder {
 
             final BindingService bindingService = consumerBuilder.getBindingService();
             final AbstractBindingTargetFactory<? extends MessageChannel> targetFactory = consumerBuilder.getAbstractBindingTargetFactory();
-            final ConfigurableListableBeanFactory beanFactory = consumerBuilder.getConfigurableListableBeanFactory();
             final MessageHandler consumerHandler = consumerBuilder.getMessageHandler();
             final String topicPrefix = consumerBuilder.getTopicPrefix();
            
@@ -120,17 +112,10 @@ public class ConsumerBuilder {
             bindingServiceProperties.getBindings().put(consumerName, bindingProperties);
 
             SubscribableChannel channel = (SubscribableChannel) targetFactory.createInput(consumerName);
-            beanFactory.registerSingleton(consumerName, channel);
-            channel = (SubscribableChannel) beanFactory.initializeBean(channel, consumerName);
-
             bindingService.bindConsumer(channel, consumerName);
 
             channel.subscribe(consumerHandler);
         }
-    }
-
-    public ConfigurableListableBeanFactory getConfigurableListableBeanFactory() {
-        return configurableListableBeanFactory;
     }
 
     public AbstractBindingTargetFactory<? extends MessageChannel> getAbstractBindingTargetFactory() {

@@ -19,7 +19,6 @@ import javax.annotation.PostConstruct;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
 import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
@@ -71,8 +70,6 @@ public class PollerConfiguration {
     
     private ObjectMapper objectMapper;
     
-    private ConfigurableListableBeanFactory beanFactory;
-
     private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
     
     private BindingService bindingService;
@@ -81,7 +78,6 @@ public class PollerConfiguration {
             PollerProperties pollerProperties, JobRepository jobRepository, ConsumerRepository consumerRepository,
             ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge,
             KafkaBinderConfigurationProperties kafkaBinderProperties, ObjectMapper objectMapper,
-            ConfigurableListableBeanFactory beanFactory,
             AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService) {
         super();
         this.zeebeClientProperties = zeebeClientProperties;
@@ -92,7 +88,6 @@ public class PollerConfiguration {
         this.streamBridge = streamBridge;
         this.kafkaBinderProperties = kafkaBinderProperties;
         this.objectMapper = objectMapper;
-        this.beanFactory = beanFactory;
         this.targetFactory = targetFactory;
         this.bindingService = bindingService;
         this.zeebeClient = this.zeebeClientBuilder.build();
@@ -151,9 +146,16 @@ public class PollerConfiguration {
             jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
 
             if(!consumerRepository.addConsumerIfAbsent(topicPrefix)) {
-                final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper, zeebeClient);
-                ConsumerBuilder.prepare(beanFactory, targetFactory, bindingService, messageHandler,
-                    topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
+                try {
+                    final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
+                        zeebeClient);
+                    ConsumerBuilder.prepare(targetFactory, bindingService, messageHandler, topicPrefix).setTopicSuffix(
+                        consumerTopicSuffix).build();
+                } catch (Exception e) {
+                    LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
+                    consumerRepository.removeConsumer(topicPrefix);
+                    LOGGER.debug("Error while building the consumer. So remove the consumer {}", topicPrefix);
+                }
             }
             streamBridge.send(topicName, variablesAsMap);
         }
