@@ -16,7 +16,7 @@ public class DefaultJobServiceImpl implements JobService {
 
 	@Override
 	public void addJob(JobInfo job) {
-		store.put(job.getTicketId(), job);
+		store.put(job.getCorrelationKey(), job);
 	}
 
 	@Override

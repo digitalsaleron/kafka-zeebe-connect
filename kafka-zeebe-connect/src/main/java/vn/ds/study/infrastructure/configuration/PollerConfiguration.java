@@ -67,7 +67,7 @@ public class PollerConfiguration {
     
     private StreamBridge streamBridge;
     
-    private KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties;
+    private KafkaBinderConfigurationProperties kafkaBinderProperties;
     
     private ObjectMapper objectMapper;
     
@@ -80,7 +80,7 @@ public class PollerConfiguration {
     public PollerConfiguration(ZeebeClientConfigurationProperties zeebeClientProperties,
             PollerProperties pollerProperties, JobRepository jobRepository, ConsumerRepository consumerRepository,
             ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge,
-            KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties, ObjectMapper objectMapper,
+            KafkaBinderConfigurationProperties kafkaBinderProperties, ObjectMapper objectMapper,
             ConfigurableListableBeanFactory beanFactory,
             AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService) {
         super();
@@ -90,7 +90,7 @@ public class PollerConfiguration {
         this.consumerRepository = consumerRepository;
         this.zeebeClientBuilder = zeebeClientBuilder;
         this.streamBridge = streamBridge;
-        this.kafkaBinderConfigurationProperties = kafkaBinderConfigurationProperties;
+        this.kafkaBinderProperties = kafkaBinderProperties;
         this.objectMapper = objectMapper;
         this.beanFactory = beanFactory;
         this.targetFactory = targetFactory;
@@ -103,7 +103,9 @@ public class PollerConfiguration {
         ArgumentUtil.ensureNotNullNorEmpty("jobType", pollerProperties.getJobType());
         ArgumentUtil.ensureNotNullNorEmpty("correlationKey", pollerProperties.getCorrelationKey());
         ArgumentUtil.ensureNotNullNorEmpty("consumerProperties.topic.suffix",
-            kafkaBinderConfigurationProperties.getConsumerProperties().get("topic.suffix"));
+            kafkaBinderProperties.getConsumerProperties().get("topic.suffix"));
+        ArgumentUtil.ensureNotNullNorEmpty("producerProperties.topic.suffix",
+            kafkaBinderProperties.getConsumerProperties().get("topic.suffix"));       
 
         int numberOfThread = this.zeebeClientProperties.getWorker().getThreads();
 
@@ -142,17 +144,14 @@ public class PollerConfiguration {
 
             final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
             final String topicPrefix = job.getElementId();
-            final String producerTopicSuffix = kafkaBinderConfigurationProperties.getProducerProperties().get("topic.suffix");
-            final String consumerTopicSuffix = kafkaBinderConfigurationProperties.getConsumerProperties().get("topic.suffix");
+            final String producerTopicSuffix = kafkaBinderProperties.getProducerProperties().get("topic.suffix");
+            final String consumerTopicSuffix = kafkaBinderProperties.getConsumerProperties().get("topic.suffix");
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
 
             jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
 
-            if (!consumerRepository.containConsumer(topicPrefix)) {
-                
-                consumerRepository.addConsumer(topicPrefix);
+            if(!consumerRepository.addConsumerIfAbsent(topicPrefix)) {
                 final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper, zeebeClient);
-                
                 ConsumerBuilder.prepare(beanFactory, targetFactory, bindingService, messageHandler,
                     topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
             }

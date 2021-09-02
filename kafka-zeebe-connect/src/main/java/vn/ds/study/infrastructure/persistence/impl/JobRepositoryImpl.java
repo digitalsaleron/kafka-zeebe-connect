@@ -27,12 +27,11 @@ public class JobRepositoryImpl implements JobRepository{
 
     @Override
     public void addJob(JobInfo jobInfo) {
-        
+        store.put(jobInfo.getCorrelationKey(), jobInfo);
     }
 
     @Override
     public JobInfo findJob(String correlationKey) {
-        // TODO Auto-generated method stub
-        return null;
+        return this.store.remove(correlationKey);
     }
 }

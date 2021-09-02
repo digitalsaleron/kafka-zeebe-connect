@@ -17,5 +17,6 @@ public interface ConsumerRepository {
     void addConsumer(String consumerName);
     
     boolean containConsumer(String consumerName);
-
+    
+    boolean addConsumerIfAbsent(String consumerName);
 }

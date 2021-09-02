@@ -34,4 +34,10 @@ public class ConsumerRepositoryImpl implements ConsumerRepository{
         return this.store.containsKey(consumerName);
     }
 
+    @Override
+    public synchronized boolean addConsumerIfAbsent(String consumerName) {
+        boolean result = this.store.containsKey(consumerName);
+        this.store.put(consumerName, consumerName);
+        return result;
+    }
 }
