@@ -4,7 +4,7 @@ import io.camunda.zeebe.client.api.response.ActivatedJob;
 
 public class JobInfo {
     
-    private String ticketId;
+    private String correlationKey;
     
 	private long instanceId;
 
@@ -17,9 +17,9 @@ public class JobInfo {
 		return new JobInfo(ticketId, instanceId, jobId, activatedJob);
 	}
 
-	private JobInfo(String ticketId, long instanceId, long jobId, ActivatedJob activatedJob) {
+	private JobInfo(String correlationKey, long instanceId, long jobId, ActivatedJob activatedJob) {
 		super();
-		this.ticketId = ticketId;
+		this.correlationKey = correlationKey;
 		this.instanceId = instanceId;
 		this.jobId = jobId;
 		this.activatedJob = activatedJob;
@@ -49,7 +49,7 @@ public class JobInfo {
 		this.activatedJob = activatedJob;
 	}
 
-    public String getTicketId() {
-        return ticketId;
+    public String getCorrelationKey() {
+        return correlationKey;
     }
 }
