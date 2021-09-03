@@ -43,7 +43,7 @@ public class ZeebeClientJMX {
     }
     
     @PostConstruct
-    void initialize() {
+    private void initialize() {
         registerMbeans();
     }
 
