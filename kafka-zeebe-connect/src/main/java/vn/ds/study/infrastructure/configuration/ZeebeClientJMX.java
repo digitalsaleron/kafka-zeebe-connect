@@ -32,36 +32,36 @@ import io.camunda.zeebe.spring.client.properties.ZeebeClientProperties;
 
 @Configuration
 public class ZeebeClientJMX {
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ZeebeClientJMX.class);
-    
+
     private ZeebeClientConfigurationProperties clientConfigurationProperties;
-    
+
     public ZeebeClientJMX(ZeebeClientConfigurationProperties clientConfigurationProperties) {
         super();
         this.clientConfigurationProperties = clientConfigurationProperties;
     }
-    
+
     @PostConstruct
     private void initialize() {
         registerMbeans();
     }
 
     private void registerMbeans() {
-      try {
-          final MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
-          final String zeebeClientName = "vn.sps.cdipp.jmx:category=ZeebeClient,name=zeebeClient";
-          final ObjectName objectName = new ObjectName(zeebeClientName);
-          
-          StandardMBean standardMBean = new StandardMBean(this.clientConfigurationProperties, ZeebeClientProperties.class);
-          
-          mbeanServer.registerMBean(standardMBean, objectName);
-          
-          LOGGER.info("Register ZeebeClient JMX {}", standardMBean);
-      } catch (MalformedObjectNameException | InstanceAlreadyExistsException | MBeanRegistrationException
-              | NotCompliantMBeanException e) {
-          LOGGER.error("Error while registering the ZeebeClient JMX. Detail: ", e);
-      }
-  }
-    
+        try {
+            final MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
+            final String zeebeClientName = "vn.sps.cdipp.jmx:category=ZeebeClient,name=zeebeClient";
+            final ObjectName objectName = new ObjectName(zeebeClientName);
+
+            StandardMBean standardMBean = new StandardMBean(this.clientConfigurationProperties,
+                ZeebeClientProperties.class);
+
+            mbeanServer.registerMBean(standardMBean, objectName);
+
+            LOGGER.info("Register ZeebeClient JMX {}", standardMBean);
+        } catch (MalformedObjectNameException | InstanceAlreadyExistsException | MBeanRegistrationException
+                | NotCompliantMBeanException e) {
+            LOGGER.error("Error while registering the ZeebeClient JMX. Detail: ", e);
+        }
+    }
 }
