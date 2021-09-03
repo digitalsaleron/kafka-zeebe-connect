@@ -102,8 +102,6 @@ public class PollerConfiguration {
         for (int thread = 0; thread < numberOfThread; thread++) {
             createJobWorker(this.pollerProperties.getJobType(), new KafkaConnectJobHandler());
         }
-        
-//        registerMbeans();
     }
     
     private void createJobWorker(final String jobType, final JobHandler jobHandler) {
