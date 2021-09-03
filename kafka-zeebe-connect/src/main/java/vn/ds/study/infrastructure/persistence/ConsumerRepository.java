@@ -14,7 +14,7 @@ package vn.ds.study.infrastructure.persistence;
 
 public interface ConsumerRepository {
     
-    boolean addConsumerIfAbsent(String consumerName);
+    boolean findAndAddConsumerIfAbsent(String consumerName);
     
     String removeConsumer(String consumerName);
 }

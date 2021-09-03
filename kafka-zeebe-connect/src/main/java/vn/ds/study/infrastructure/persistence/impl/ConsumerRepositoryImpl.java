@@ -25,7 +25,7 @@ public class ConsumerRepositoryImpl implements ConsumerRepository{
     private Map<String, String> store = new ConcurrentHashMap<>();
 
     @Override
-    public synchronized boolean addConsumerIfAbsent(String consumerName) {
+    public synchronized boolean findAndAddConsumerIfAbsent(String consumerName) {
         boolean result = this.store.containsKey(consumerName);
         this.store.putIfAbsent(consumerName, consumerName);
         return result;

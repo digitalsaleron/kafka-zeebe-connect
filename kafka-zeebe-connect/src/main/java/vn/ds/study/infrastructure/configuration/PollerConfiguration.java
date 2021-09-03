@@ -145,7 +145,7 @@ public class PollerConfiguration {
 
             jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
 
-            if(!consumerRepository.addConsumerIfAbsent(topicPrefix)) {
+            if(!consumerRepository.findAndAddConsumerIfAbsent(topicPrefix)) {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
                         zeebeClient);
