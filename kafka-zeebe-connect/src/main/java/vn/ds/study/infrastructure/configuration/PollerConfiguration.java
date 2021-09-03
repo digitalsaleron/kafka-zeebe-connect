@@ -31,14 +31,13 @@ import org.springframework.messaging.MessageHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.ZeebeClientBuilder;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.client.api.worker.JobHandler;
 import io.camunda.zeebe.client.api.worker.JobWorker;
 import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3;
+import io.camunda.zeebe.client.impl.ZeebeClientBuilderImpl;
 import io.camunda.zeebe.client.impl.command.ArgumentUtil;
-import io.camunda.zeebe.spring.client.properties.ZeebeClientConfigurationProperties;
 import vn.ds.study.application.builder.ConsumerBuilder;
 import vn.ds.study.application.handler.ConsumerMessageHandler;
 import vn.ds.study.infrastructure.persistence.ConsumerRepository;
@@ -52,8 +51,6 @@ public class PollerConfiguration {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(PollerConfiguration.class);
 
-    private ZeebeClientConfigurationProperties zeebeClientProperties;
-
     private PollerProperties pollerProperties;
 
     private JobRepository jobRepository;
@@ -62,7 +59,7 @@ public class PollerConfiguration {
     
     private ZeebeClient zeebeClient;
     
-    private ZeebeClientBuilder zeebeClientBuilder;
+    private ZeebeClientBuilderImpl zeebeClientBuilder;
     
     private StreamBridge streamBridge;
     
@@ -74,13 +71,11 @@ public class PollerConfiguration {
     
     private BindingService bindingService;
 
-    public PollerConfiguration(ZeebeClientConfigurationProperties zeebeClientProperties,
-            PollerProperties pollerProperties, JobRepository jobRepository, ConsumerRepository consumerRepository,
-            ZeebeClientBuilder zeebeClientBuilder, StreamBridge streamBridge,
+    public PollerConfiguration(PollerProperties pollerProperties, JobRepository jobRepository,
+            ConsumerRepository consumerRepository, ZeebeClientBuilderImpl zeebeClientBuilder, StreamBridge streamBridge,
             KafkaBinderConfigurationProperties kafkaBinderProperties, ObjectMapper objectMapper,
             AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService) {
         super();
-        this.zeebeClientProperties = zeebeClientProperties;
         this.pollerProperties = pollerProperties;
         this.jobRepository = jobRepository;
         this.consumerRepository = consumerRepository;
@@ -102,20 +97,22 @@ public class PollerConfiguration {
         ArgumentUtil.ensureNotNullNorEmpty("producerProperties.topic.suffix",
             kafkaBinderProperties.getConsumerProperties().get("topic.suffix"));       
 
-        int numberOfThread = this.zeebeClientProperties.getWorker().getThreads();
-
+        int numberOfThread = this.zeebeClientBuilder.getNumJobWorkerExecutionThreads();
+                
         for (int thread = 0; thread < numberOfThread; thread++) {
             createJobWorker(this.pollerProperties.getJobType(), new KafkaConnectJobHandler());
         }
+        
+//        registerMbeans();
     }
     
     private void createJobWorker(final String jobType, final JobHandler jobHandler) {
 
-        final String name = this.zeebeClientProperties.getWorker().getDefaultName();
-        final int maxJobsActive = this.zeebeClientProperties.getWorker().getMaxJobsActive();
-        final Duration timeout = this.zeebeClientProperties.getJob().getTimeout();
-        final Duration pollInterval = this.zeebeClientProperties.getJob().getPollInterval();
-        final Duration requestTimeout = this.zeebeClientProperties.getRequestTimeout();
+        final String name = this.zeebeClientBuilder.getDefaultJobWorkerName();
+        final int maxJobsActive = this.zeebeClientBuilder.getDefaultJobWorkerMaxJobsActive();
+        final Duration timeout = this.zeebeClientBuilder.getDefaultJobTimeout();
+        final Duration pollInterval = this.zeebeClientBuilder.getDefaultJobPollInterval();
+        final Duration requestTimeout = this.zeebeClientBuilder.getDefaultRequestTimeout();
         
         final JobWorkerBuilderStep3 builder = this.zeebeClient
                 .newWorker()
