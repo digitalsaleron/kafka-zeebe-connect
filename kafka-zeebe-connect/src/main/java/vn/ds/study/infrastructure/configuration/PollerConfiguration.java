@@ -139,13 +139,14 @@ public class PollerConfiguration {
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
 
             jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
-
+            
             if(!consumerRepository.findAndAddConsumerIfAbsent(topicPrefix)) {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
                         zeebeClient);
                     ConsumerBuilder.prepare(targetFactory, bindingService, messageHandler, topicPrefix).setTopicSuffix(
                         consumerTopicSuffix).build();
+                    
                 } catch (Exception e) {
                     LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
                     consumerRepository.removeConsumer(topicPrefix);

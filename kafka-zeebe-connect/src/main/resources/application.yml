@@ -23,25 +23,8 @@ spring:
                                  brokers: ${bootstrap.server}
          bindings:
             applicationMetrics.destination: ${tenant.prefix}.process-metrics
-            validatingRequests-out-0:
-               binder: kafka1
-               destination: ${tenant.prefix}.ticket-validation-requests
-            validatingRequests-in-0:
-               binder: kafka1
-               destination: ${tenant.prefix}.ticket-validation-responses
-               group: validation
          kafka:
             bindings:
-               validatingRequests-out-0:
-                  producer:
-                     topic.properties:
-                        retention.ms: 600000
-               validatingRequests-in-0:         
-                  consumer:
-                     configuration:
-                        isolation.level: read_committed
-                        max.poll.records: 5
-                        max.poll.interval.ms: 300000
                ticket-validation-in-0:
                   consumer:
                      configuration:
