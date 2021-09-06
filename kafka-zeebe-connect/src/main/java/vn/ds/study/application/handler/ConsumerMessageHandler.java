@@ -41,12 +41,16 @@ public class ConsumerMessageHandler implements MessageHandler {
     private ObjectMapper objectMapper;
 
     private ZeebeClient client;
-
-    public ConsumerMessageHandler(JobRepository jobRepository, ObjectMapper objectMapper, ZeebeClient zeebeClient) {
+    
+    private String correlationKey;
+    
+    public ConsumerMessageHandler(JobRepository jobRepository, ObjectMapper objectMapper, ZeebeClient client,
+            String correlationKey) {
         super();
         this.jobRepository = jobRepository;
         this.objectMapper = objectMapper;
-        this.client = zeebeClient;
+        this.client = client;
+        this.correlationKey = correlationKey;
     }
 
     @Override
@@ -55,18 +59,18 @@ public class ConsumerMessageHandler implements MessageHandler {
         JsonNode newNode;
         try {
             newNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
-            ObjectNode objectNode = (ObjectNode) newNode;
-            String ticketId = objectNode.get("ticketId").asText();
+            final ObjectNode objectNode = (ObjectNode) newNode;
+            final String key = objectNode.get(correlationKey).asText();
 
-            JobInfo jobI = jobRepository.findJob(ticketId);
-            ActivatedJob job = jobI.getActivatedJob();
+            final JobInfo jobI = jobRepository.findJob(key);
+            final ActivatedJob job = jobI.getActivatedJob();
 
-            Map<String, Object> variables = objectMapper.convertValue(objectNode,
+            final Map<String, Object> variables = objectMapper.convertValue(objectNode,
                 new TypeReference<Map<String, Object>>() {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
         } catch (IOException e) {
-            LOGGER.error("", e);
+            LOGGER.error("Error while consuming the message. Detail: ", e);
         }
     }
 }

@@ -27,6 +27,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.SubscribableChannel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -38,10 +39,11 @@ import io.camunda.zeebe.client.api.worker.JobWorker;
 import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3;
 import io.camunda.zeebe.client.impl.ZeebeClientBuilderImpl;
 import io.camunda.zeebe.client.impl.command.ArgumentUtil;
-import vn.ds.study.application.builder.ConsumerBuilder;
+import vn.ds.study.application.builder.KafkaConsumerBuilder;
+import vn.ds.study.application.builder.KafkaConsumerManager;
 import vn.ds.study.application.handler.ConsumerMessageHandler;
-import vn.ds.study.infrastructure.persistence.ConsumerRepository;
 import vn.ds.study.infrastructure.persistence.JobRepository;
+import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.infrastructure.properties.PollerProperties;
 import vn.ds.study.model.JobInfo;
 
@@ -55,7 +57,7 @@ public class PollerConfiguration {
 
     private JobRepository jobRepository;
 
-    private ConsumerRepository consumerRepository;
+    private KafkaConsumerManager kafkaConsumerManager;
     
     private ZeebeClient zeebeClient;
     
@@ -63,28 +65,32 @@ public class PollerConfiguration {
     
     private StreamBridge streamBridge;
     
-    private KafkaBinderConfigurationProperties kafkaBinderProperties;
-    
     private ObjectMapper objectMapper;
     
     private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
     
     private BindingService bindingService;
+    
+    private KafkaTopicProperties consumerTopicProperties;
+    
+    private KafkaTopicProperties producerTopicProperties;
 
     public PollerConfiguration(PollerProperties pollerProperties, JobRepository jobRepository,
-            ConsumerRepository consumerRepository, ZeebeClientBuilderImpl zeebeClientBuilder, StreamBridge streamBridge,
-            KafkaBinderConfigurationProperties kafkaBinderProperties, ObjectMapper objectMapper,
-            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService) {
+            KafkaConsumerManager kafkaConsumerManager, ZeebeClientBuilderImpl zeebeClientBuilder,
+            StreamBridge streamBridge, ObjectMapper objectMapper,
+            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService,
+            KafkaTopicProperties consumerTopicProperties, KafkaTopicProperties producerTopicProperties) {
         super();
         this.pollerProperties = pollerProperties;
         this.jobRepository = jobRepository;
-        this.consumerRepository = consumerRepository;
+        this.kafkaConsumerManager = kafkaConsumerManager;
         this.zeebeClientBuilder = zeebeClientBuilder;
         this.streamBridge = streamBridge;
-        this.kafkaBinderProperties = kafkaBinderProperties;
         this.objectMapper = objectMapper;
         this.targetFactory = targetFactory;
         this.bindingService = bindingService;
+        this.consumerTopicProperties = consumerTopicProperties;
+        this.producerTopicProperties = producerTopicProperties;
         this.zeebeClient = this.zeebeClientBuilder.build();
     }
 
@@ -92,10 +98,8 @@ public class PollerConfiguration {
     private void initializePoller() {
         ArgumentUtil.ensureNotNullNorEmpty("jobType", pollerProperties.getJobType());
         ArgumentUtil.ensureNotNullNorEmpty("correlationKey", pollerProperties.getCorrelationKey());
-        ArgumentUtil.ensureNotNullNorEmpty("consumerProperties.topic.suffix",
-            kafkaBinderProperties.getConsumerProperties().get("topic.suffix"));
-        ArgumentUtil.ensureNotNullNorEmpty("producerProperties.topic.suffix",
-            kafkaBinderProperties.getConsumerProperties().get("topic.suffix"));       
+        ArgumentUtil.ensureNotNullNorEmpty("consumerProperties.topic.suffix", consumerTopicProperties.getSuffix());
+        ArgumentUtil.ensureNotNullNorEmpty("producerProperties.topic.suffix", producerTopicProperties.getSuffix());
 
         int numberOfThread = this.zeebeClientBuilder.getNumJobWorkerExecutionThreads();
                 
@@ -134,22 +138,24 @@ public class PollerConfiguration {
 
             final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
             final String topicPrefix = job.getElementId();
-            final String producerTopicSuffix = kafkaBinderProperties.getProducerProperties().get("topic.suffix");
-            final String consumerTopicSuffix = kafkaBinderProperties.getConsumerProperties().get("topic.suffix");
+            final String producerTopicSuffix = producerTopicProperties.getSuffix();
+            final String consumerTopicSuffix = consumerTopicProperties.getSuffix();
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
-
+            final String consumerName = topicPrefix;
+            
             jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
             
-            if(!consumerRepository.findAndAddConsumerIfAbsent(topicPrefix)) {
+            if(!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
-                        zeebeClient);
-                    ConsumerBuilder.prepare(targetFactory, bindingService, messageHandler, topicPrefix).setTopicSuffix(
-                        consumerTopicSuffix).build();
-                    
+                        zeebeClient, correlationKey);
+                    final SubscribableChannel channel = KafkaConsumerBuilder.prepare(targetFactory, bindingService,
+                        messageHandler, topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
+                    kafkaConsumerManager.addBindedConsumer(consumerName, channel);
                 } catch (Exception e) {
                     LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
-                    consumerRepository.removeConsumer(topicPrefix);
+                    kafkaConsumerManager.removeConsumer(consumerName);
+                    bindingService.unbindConsumers(consumerName);
                     LOGGER.debug("Error while building the consumer. So remove the consumer {}", topicPrefix);
                 }
             }

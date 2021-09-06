@@ -22,7 +22,7 @@ import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.SubscribableChannel;
 import org.springframework.util.StringUtils;
 
-public class ConsumerBuilder {
+public final class KafkaConsumerBuilder {
 
     private static final String TOPIC_SUFFIX_DEFAULT = "-response";
     
@@ -36,10 +36,10 @@ public class ConsumerBuilder {
     
     private String topicPrefix;
 
-    private ConsumerBuilder() {
+    private KafkaConsumerBuilder() {
     }
 
-    public ConsumerBuilder(AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
+    public KafkaConsumerBuilder(AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
             BindingService bindingService, MessageHandler messageHandler, String topicPrefix) {
         super();
         this.abstractBindingTargetFactory = abstractBindingTargetFactory;
@@ -54,12 +54,12 @@ public class ConsumerBuilder {
         MessageHandler messageHandler,
         String topicPrefix) {
 
-        return (new ConsumerBuilder()).new ConsumerBuilder2(targetFactory, bindingService, messageHandler, topicPrefix);
+        return (new KafkaConsumerBuilder()).new ConsumerBuilder2(targetFactory, bindingService, messageHandler, topicPrefix);
     }
 
     public class ConsumerBuilder2 {
 
-        private ConsumerBuilder consumerBuilder;
+        private KafkaConsumerBuilder consumerBuilder;
 
         private String topicSuffix;
         
@@ -69,7 +69,7 @@ public class ConsumerBuilder {
         
         ConsumerBuilder2(AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
                 BindingService bindingService, MessageHandler messageHandler, String topicPrefix) {
-            this.consumerBuilder = new ConsumerBuilder(abstractBindingTargetFactory, bindingService, messageHandler,
+            this.consumerBuilder = new KafkaConsumerBuilder(abstractBindingTargetFactory, bindingService, messageHandler,
                 topicPrefix);
         }
 
@@ -88,7 +88,7 @@ public class ConsumerBuilder {
             return this;
         }
 
-        public void build() {
+        public SubscribableChannel build() {
             final String consumerGroup = StringUtils.hasText(this.group) ? this.group : consumerBuilder.getTopicPrefix();
             final String suffix = StringUtils.hasText(this.topicSuffix) ? this.topicSuffix : TOPIC_SUFFIX_DEFAULT;
             final String consumerSuffix = StringUtils.hasText(this.consumerNameSuffix) ? this.consumerNameSuffix
@@ -115,6 +115,8 @@ public class ConsumerBuilder {
             bindingService.bindConsumer(channel, consumerName);
 
             channel.subscribe(consumerHandler);
+            
+            return channel;
         }
     }
 

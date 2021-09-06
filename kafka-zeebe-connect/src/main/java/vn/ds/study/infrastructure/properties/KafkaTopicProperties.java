@@ -1,7 +1,7 @@
 /*
- * Class: ConsumerRepository
+ * Class: TopicProperties
  *
- * Created on Sep 2, 2021
+ * Created on Sep 7, 2021
  *
  * (c) Copyright Swiss Post Solutions Ltd, unpublished work
  * All use, disclosure, and/or reproduction of this material is prohibited
@@ -10,11 +10,17 @@
  * Swiss Post Solution.
  * Floor 4-5-8, ICT Tower, Quang Trung Software City
  */
-package vn.ds.study.infrastructure.persistence;
+package vn.ds.study.infrastructure.properties;
 
-public interface ConsumerRepository {
-    
-    boolean findAndAddConsumerIfAbsent(String consumerName);
-    
-    String removeConsumer(String consumerName);
+public class KafkaTopicProperties {
+
+    private String suffix;
+
+    public String getSuffix() {
+        return suffix;
+    }
+
+    public void setSuffix(String suffix) {
+        this.suffix = suffix;
+    }
 }
