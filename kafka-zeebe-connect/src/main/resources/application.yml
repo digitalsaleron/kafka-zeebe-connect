@@ -37,7 +37,7 @@ spring:
                producerProperties:
                   topic.suffix: -requests
                transaction:
-                  transaction-id-prefix: approval-
+                  transaction-id-prefix: kafka-connect-${random.uuid}-
                   producer:
                      configuration:
                         max.in.flight.requests.per.connection: 1
@@ -80,16 +80,6 @@ management:
       jmx.exposure.include: '*'
    endpoint:
       health.show-details: always
-camunda.bpm.client:
-   base-url: http://192.168.56.4:8099/engine-rest # the URL pointing to the Camunda Platform Runtime REST API
-   lock-duration: 300000 # defines how many milliseconds the External Tasks are locked until they can be fetched again
-   subscriptions:
-      validatingTickets:
-         variable-names: type,amount,totalCostAmount
-         process-definition-key: TicketApprovalProcess
-      approvedTickets:
-         variable-names: type,amount,totalCostAmount,isValid,isApproved
-         process-definition-key: TicketApprovalProcess
 zeebe.client:
    broker.gatewayAddress: 10.10.15.219:8080
    security.plaintext: true
