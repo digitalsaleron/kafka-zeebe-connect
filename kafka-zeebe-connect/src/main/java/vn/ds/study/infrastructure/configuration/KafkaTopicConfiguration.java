@@ -19,16 +19,16 @@ import org.springframework.context.annotation.Configuration;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 
 @Configuration
-public class TopicConfiguration {
+public class KafkaTopicConfiguration {
 
     @Bean("consumerTopicProperties")
-    @ConfigurationProperties("spring.cloud.stream.kafka.binder.consumerProperties.topic")
+    @ConfigurationProperties(prefix = "spring.cloud.stream.kafka.binder.consumer-properties.topic")
     KafkaTopicProperties getConsumerTopicProperties() {
         return new KafkaTopicProperties();
     }
     
     @Bean("producerTopicProperties")
-    @ConfigurationProperties("spring.cloud.stream.kafka.binder.producerProperties.topic")
+    @ConfigurationProperties(prefix = "spring.cloud.stream.kafka.binder.producer-properties.topic")
     KafkaTopicProperties getProducerTopicProperties() {
         return new KafkaTopicProperties();
     }

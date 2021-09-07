@@ -81,6 +81,7 @@ management:
    endpoint:
       health.show-details: always
 zeebe.client:
+   requestTimeout: 10000
    broker.gatewayAddress: 10.10.15.219:8080
    security.plaintext: true
    worker:

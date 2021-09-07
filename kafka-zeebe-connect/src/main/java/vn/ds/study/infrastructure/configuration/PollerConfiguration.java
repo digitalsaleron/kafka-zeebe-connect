@@ -148,7 +148,7 @@ public class PollerConfiguration {
             if(!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
-                        zeebeClient, correlationKey);
+                        zeebeClient, pollerProperties.getCorrelationKey());
                     final SubscribableChannel channel = KafkaConsumerBuilder.prepare(targetFactory, bindingService,
                         messageHandler, topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
                     kafkaConsumerManager.addBindedConsumer(consumerName, channel);
