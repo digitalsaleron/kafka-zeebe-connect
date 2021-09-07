@@ -24,17 +24,12 @@ spring:
          bindings:
             applicationMetrics.destination: ${tenant.prefix}.process-metrics
          kafka:
-            bindings:
-               # TODO -- Is it possible that we change this to default?
-               ticket-validation-in-0:
-                  consumer:
-                     configuration:
-                        isolation.level: read_committed
-                        max.poll.records: 5
-                        max.poll.interval.ms: 300000
             binder:
                consumerProperties:
                   topic.suffix: -responses
+                  isolation.level: read_committed
+                  max.poll.records: 5
+                  max.poll.interval.ms: 300000
                producerProperties:
                   topic.suffix: -requests
                transaction:
