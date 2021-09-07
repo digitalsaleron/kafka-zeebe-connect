@@ -12,14 +12,10 @@
  */
 package vn.ds.study.application.builder;
 
-import org.springframework.messaging.SubscribableChannel;
-
 public interface KafkaConsumerManager {
 
     boolean findAndAddConsumerIfAbsent(String consumerName);
 
-    void addBindedConsumer(String consumerName, SubscribableChannel channel);
-    
-    SubscribableChannel removeConsumer(String consumerName);
+    String removeConsumer(String consumerName);
 
 }

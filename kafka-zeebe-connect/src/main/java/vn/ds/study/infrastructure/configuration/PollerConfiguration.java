@@ -27,7 +27,6 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
-import org.springframework.messaging.SubscribableChannel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -149,9 +148,8 @@ public class PollerConfiguration {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
                         zeebeClient, pollerProperties.getCorrelationKey());
-                    final SubscribableChannel channel = KafkaConsumerBuilder.prepare(targetFactory, bindingService,
+                    KafkaConsumerBuilder.prepare(targetFactory, bindingService,
                         messageHandler, topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
-                    kafkaConsumerManager.addBindedConsumer(consumerName, channel);
                 } catch (Exception e) {
                     LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
                     kafkaConsumerManager.removeConsumer(consumerName);

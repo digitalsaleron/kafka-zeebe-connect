@@ -15,29 +15,21 @@ package vn.ds.study.application.builder;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.cloud.stream.messaging.DirectWithAttributesChannel;
-import org.springframework.messaging.SubscribableChannel;
 import org.springframework.stereotype.Component;
 
 @Component("kafkaConsumerManager")
 public class KafkaConsumerManagerImpl implements KafkaConsumerManager{
 
-    private Map<String, SubscribableChannel> store = new ConcurrentHashMap<>();
+    private Map<String, String> store = new ConcurrentHashMap<>();
     
     @Override
     public boolean findAndAddConsumerIfAbsent(String consumerName) {
-        final SubscribableChannel previousValue = this.store.putIfAbsent(consumerName, new DirectWithAttributesChannel());
+        final String previousValue = this.store.putIfAbsent(consumerName, consumerName);
         return previousValue != null;
     }
-    
-    @Override
-    public void addBindedConsumer(String consumerName, SubscribableChannel channel) {
-        this.store.put(consumerName, channel);
-    }
-    
 
     @Override
-    public SubscribableChannel removeConsumer(String consumerName) {
+    public String removeConsumer(String consumerName) {
         return this.store.remove(consumerName);
     }
 
