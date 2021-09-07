@@ -25,6 +25,7 @@ spring:
             applicationMetrics.destination: ${tenant.prefix}.process-metrics
          kafka:
             bindings:
+               # TODO -- Is it possible that we change this to default?
                ticket-validation-in-0:
                   consumer:
                      configuration:
