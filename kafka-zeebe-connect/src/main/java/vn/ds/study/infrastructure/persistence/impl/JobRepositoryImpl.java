@@ -23,6 +23,7 @@ import vn.ds.study.model.JobInfo;
 @Repository
 public class JobRepositoryImpl implements JobRepository{
 
+	// TODO -- Is it possible that we add high availability for this store?
     private Map<String, JobInfo> store = new ConcurrentHashMap<>();
 
     @Override
