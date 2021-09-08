@@ -29,7 +29,6 @@ spring:
                __job-instances-in-0:
                   consumer: 
                      startOffset: earliest
-                     resetOffsets: true
                      topic.properties:
                         cleanup.policy: compact
             binder:

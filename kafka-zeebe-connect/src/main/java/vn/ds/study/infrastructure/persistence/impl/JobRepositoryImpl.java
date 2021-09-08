@@ -122,16 +122,17 @@ public class JobRepositoryImpl implements JobRepository{
     private Properties createKafkaConsumerProperties() {
         final Properties properties = new Properties();
 
+        properties.putAll(kafkaBinderConfigurationProperties.mergedConsumerConfiguration());
+
         final Map<String, BinderProperties> binderProperties = this.bindingServiceProperties.getBinders();
         final Map<String, Object> binderAddresses = new HashMap<>();
         binderProperties.forEach((key, value) -> {
             this.flatten(null, value.getEnvironment(), binderAddresses);
         });
-        
-        
-        properties.putAll(kafkaBinderConfigurationProperties.mergedConsumerConfiguration());
-        
-        
+        binderAddresses.forEach((key, value) -> {
+            properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, value);
+        });
+
         KafkaBindingProperties kafkaBindingProperties = kafkaExtendedBindingProperties.getBindings().get(
             BINDING_NAME_DEFAULT);
     
