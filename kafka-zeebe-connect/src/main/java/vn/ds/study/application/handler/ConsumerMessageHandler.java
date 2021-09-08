@@ -56,10 +56,9 @@ public class ConsumerMessageHandler implements MessageHandler {
     @Override
     public void handleMessage(Message<?> message) {
         final ObjectReader reader = objectMapper.reader();
-        JsonNode newNode;
         try {
-            newNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
-            final ObjectNode objectNode = (ObjectNode) newNode;
+            JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
+            final ObjectNode objectNode = (ObjectNode) jsonNode;
             final String key = objectNode.get(correlationKey).asText();
 
             final JobInfo jobI = jobRepository.findJob(key);

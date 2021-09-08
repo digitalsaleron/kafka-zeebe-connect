@@ -42,7 +42,7 @@ public final class KafkaConsumerBuilder {
     private KafkaConsumerBuilder() {
     }
 
-    public KafkaConsumerBuilder(AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
+    private KafkaConsumerBuilder(AbstractBindingTargetFactory<? extends MessageChannel> abstractBindingTargetFactory,
             BindingService bindingService, MessageHandler messageHandler, String topicPrefix) {
         super();
         this.abstractBindingTargetFactory = abstractBindingTargetFactory;
@@ -72,7 +72,8 @@ public final class KafkaConsumerBuilder {
             this.properties = properties;
         }
         
-        public KafkaConsumer<?, ?> build() {
+        @SuppressWarnings("rawtypes")
+        public KafkaConsumer build() {
             return new KafkaConsumer<>(properties);
         }
     }

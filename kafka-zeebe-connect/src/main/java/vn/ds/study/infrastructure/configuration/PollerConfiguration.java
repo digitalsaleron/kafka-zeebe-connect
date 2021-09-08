@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.kafka.properties.KafkaExtendedBindingProperties;
 import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
 import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -47,7 +48,7 @@ import vn.ds.study.infrastructure.properties.PollerProperties;
 import vn.ds.study.model.JobInfo;
 
 @Configuration
-@EnableConfigurationProperties(value = { PollerProperties.class, KafkaBinderConfigurationProperties.class})
+@EnableConfigurationProperties(value = { PollerProperties.class, KafkaBinderConfigurationProperties.class, KafkaExtendedBindingProperties.class})
 public class PollerConfiguration {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(PollerConfiguration.class);
