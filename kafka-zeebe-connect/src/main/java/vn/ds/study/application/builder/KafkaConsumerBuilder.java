@@ -12,6 +12,9 @@
  */
 package vn.ds.study.application.builder;
 
+import java.util.Properties;
+
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.springframework.cloud.stream.binder.ConsumerProperties;
 import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
 import org.springframework.cloud.stream.binding.BindingService;
@@ -56,6 +59,23 @@ public final class KafkaConsumerBuilder {
 
         return (new KafkaConsumerBuilder()).new ConsumerBuilder2(targetFactory, bindingService, messageHandler, topicPrefix);
     }
+    
+    public static ConsumerBuilder3 prepare(Properties properties) {
+        return (new KafkaConsumerBuilder()).new ConsumerBuilder3(properties);
+    }
+    
+    public class ConsumerBuilder3 {
+
+        private Properties properties;
+        
+        ConsumerBuilder3(Properties properties) {
+            this.properties = properties;
+        }
+        
+        public KafkaConsumer<?, ?> build() {
+            return new KafkaConsumer<>(properties);
+        }
+    }
 
     public class ConsumerBuilder2 {
 
@@ -89,8 +109,8 @@ public final class KafkaConsumerBuilder {
         }
 
         public SubscribableChannel build() {
+            final String suffix = this.topicSuffix != null ? this.topicSuffix : TOPIC_SUFFIX_DEFAULT;
             final String consumerGroup = StringUtils.hasText(this.group) ? this.group : consumerBuilder.getTopicPrefix();
-            final String suffix = StringUtils.hasText(this.topicSuffix) ? this.topicSuffix : TOPIC_SUFFIX_DEFAULT;
             final String consumerSuffix = StringUtils.hasText(this.consumerNameSuffix) ? this.consumerNameSuffix
                     : CONSUMER_NAME_SUFFIX_DEFAULT;
 
@@ -118,6 +138,8 @@ public final class KafkaConsumerBuilder {
             
             return channel;
         }
+        
+        
     }
 
     public AbstractBindingTargetFactory<? extends MessageChannel> getAbstractBindingTargetFactory() {
