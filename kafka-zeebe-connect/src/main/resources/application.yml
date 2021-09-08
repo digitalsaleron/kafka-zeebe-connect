@@ -9,7 +9,6 @@ spring:
    application.name: zeebe-kafka-connect
    jmx.enabled: true
    cloud:
-      function.definition: validatingRequests;waitingForApprovalTickets;approvedTickets
       stream:
          binders:
             kafka1:
@@ -23,7 +22,20 @@ spring:
                                  brokers: ${bootstrap.server}
          bindings:
             applicationMetrics.destination: ${tenant.prefix}.process-metrics
+            jobStorage-out-0:
+               destination: __job-instances
          kafka:
+            bindings:
+               jobStorage-out-0:
+                  producer:
+                     topic.properties:
+                        cleanup.policy: compact
+               __job-instances-in-0:
+                  consumer: 
+                     startOffset: earliest
+                     resetOffsets: true
+                     topic.properties:
+                        cleanup.policy: compact
             binder:
                consumerProperties:
                   topic.suffix: -responses
