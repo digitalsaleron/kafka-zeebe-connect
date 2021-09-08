@@ -26,10 +26,6 @@ spring:
                destination: __job-instances
          kafka:
             bindings:
-               jobStorage-out-0:
-                  producer:
-                     topic.properties:
-                        cleanup.policy: compact
                __job-instances-in-0:
                   consumer: 
                      startOffset: earliest
