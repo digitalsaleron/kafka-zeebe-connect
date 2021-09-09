@@ -15,6 +15,10 @@ package vn.ds.study.infrastructure.properties;
 public class KafkaTopicProperties {
 
     private String suffix;
+    
+    private String prefix;
+    
+    private String name;
 
     public String getSuffix() {
         return suffix;
@@ -22,5 +26,21 @@ public class KafkaTopicProperties {
 
     public void setSuffix(String suffix) {
         this.suffix = suffix;
+    }
+
+    public String getPrefix() {
+        return prefix;
+    }
+
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
