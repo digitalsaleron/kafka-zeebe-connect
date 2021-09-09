@@ -222,11 +222,10 @@ public class JobRepositoryImpl implements JobRepository {
     @Override
     public void addJob(JobInfo jobInfo) {
         this.jobIntances.put(jobInfo.getCorrelationKey(), jobInfo);
-        Map<String, Object> jobInfoAsMap = objectMapper.convertValue(jobInfo, Map.class);
 
-        Map<String, Object> headers = new HashMap<>();
+        final Map<String, Object> headers = new HashMap<>();
         headers.put(KafkaHeaders.MESSAGE_KEY, jobInfo.getCorrelationKey().getBytes());
-        Message<?> message = MessageBuilder.createMessage(jobInfoAsMap, new MessageHeaders(headers));
+        Message<?> message = MessageBuilder.createMessage(jobInfo, new MessageHeaders(headers));
         this.streamBridge.send(TOPIC_NAME_DEFAULT, message);
     }
 
