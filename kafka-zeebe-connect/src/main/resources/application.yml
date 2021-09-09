@@ -26,7 +26,6 @@ spring:
         bindings:
           job-stogare-in-0:
             consumer:
-              startOffset: earliest
               topic.properties:
                 cleanup.policy: compact
                 name: __job-instances

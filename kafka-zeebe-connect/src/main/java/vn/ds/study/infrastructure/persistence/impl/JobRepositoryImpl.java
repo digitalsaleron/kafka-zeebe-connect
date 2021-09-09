@@ -22,7 +22,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import javax.annotation.PostConstruct;
@@ -78,8 +77,6 @@ public class JobRepositoryImpl implements JobRepository {
 
     private Map<String, JobInfo> jobIntances = new ConcurrentHashMap<>();
     
-    private Map<String, JsonNode> jobIntancesAsJson = new ConcurrentHashMap<>();
-
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -134,8 +131,9 @@ public class JobRepositoryImpl implements JobRepository {
                         record.key());
                     final ObjectReader reader = objectMapper.reader();
                     JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) record.value()));
-
-                    this.jobIntancesAsJson.put(key, jsonNode);
+                    JobInfo jobInfo = objectMapper.treeToValue(jsonNode, JobInfo.class);
+                    
+                    this.jobIntances.put(key, jobInfo);
                     LOGGER.info("Loaded message key {} and message value {}", key, jsonNode);
                 }
             } catch (IOException e) {
@@ -200,10 +198,6 @@ public class JobRepositoryImpl implements JobRepository {
         
         if(bindingProperties != null && bindingProperties.getGroup() != null) {
             properties.put(ConsumerConfig.GROUP_ID_CONFIG, bindingProperties.getGroup());
-        }
-        if (kafkaBindingProperties != null) {
-            properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                kafkaBindingProperties.getConsumer().getStartOffset().name());
         }
         return properties;
     }

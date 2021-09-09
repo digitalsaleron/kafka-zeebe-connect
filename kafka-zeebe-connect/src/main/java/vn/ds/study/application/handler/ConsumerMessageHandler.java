@@ -28,8 +28,8 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.api.response.ActivatedJob;
 import vn.ds.study.infrastructure.persistence.JobRepository;
+import vn.ds.study.model.ActivatedJob;
 import vn.ds.study.model.JobInfo;
 
 public class ConsumerMessageHandler implements MessageHandler {

@@ -1,7 +1,5 @@
 package vn.ds.study.model;
 
-import io.camunda.zeebe.client.api.response.ActivatedJob;
-
 public class JobInfo {
     
     private String correlationKey;
@@ -11,7 +9,7 @@ public class JobInfo {
 	private long jobId;
 	
 	private ActivatedJob activatedJob;
-
+	
 	public static JobInfo from(String ticketId, long instanceId, long jobId,
 	        ActivatedJob activatedJob) {
 		return new JobInfo(ticketId, instanceId, jobId, activatedJob);

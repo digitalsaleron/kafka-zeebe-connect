@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.camunda.zeebe.client.ZeebeClient;
@@ -143,7 +144,10 @@ public class PollerConfiguration {
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
             final String consumerName = topicPrefix;
             
-            jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), job));
+            JsonNode node = objectMapper.convertValue(job, JsonNode.class);
+            vn.ds.study.model.ActivatedJob activatedJob = objectMapper.treeToValue(node, vn.ds.study.model.ActivatedJob.class);     
+            
+            jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), activatedJob));
             
             if(!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
                 try {
