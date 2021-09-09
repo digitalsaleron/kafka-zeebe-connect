@@ -34,6 +34,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
@@ -72,7 +73,7 @@ public class JobRepositoryImpl implements JobRepository {
 
     private static final String BINDING_NAME_DEFAULT = "job-stogare-in-0";
 
-    private static final String TOPIC_NAME_DEFAULT = "__job-instances";
+    private static final String TOPIC_NAME_DEFAULT = "_job-instances";
     
     private static final String GROUP_NAME_DEFAULT = "job-instance-manager";
 
@@ -165,7 +166,11 @@ public class JobRepositoryImpl implements JobRepository {
                 final short replicationFactor = this.kafkaBinderConfigurationProperties.getReplicationFactor();
                 final Map<String, String> configs = new HashMap<>();
                 configs.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT);
-
+                configs.put(TopicConfig.DELETE_RETENTION_MS_CONFIG, "0");
+                configs.put(TopicConfig.MIN_CLEANABLE_DIRTY_RATIO_CONFIG, "0.01");
+                configs.put(TopicConfig.SEGMENT_MS_CONFIG, "100");
+                configs.put(TopicConfig.SEGMENT_BYTES_CONFIG, "1048576");
+                
                 final NewTopic topic = new NewTopic(topicName, minPartition, replicationFactor);
                 topic.configs(configs);
 
@@ -187,10 +192,9 @@ public class JobRepositoryImpl implements JobRepository {
 
         properties.putAll(kafkaBinderConfigurationProperties.mergedConsumerConfiguration());
 
-        properties.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT);
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-
+        
         final Map<String, BinderProperties> binderProperties = this.bindingServiceProperties.getBinders();
         final Map<String, Object> binderAddresses = new HashMap<>();
         binderProperties.forEach((key, value) -> {
@@ -237,7 +241,11 @@ public class JobRepositoryImpl implements JobRepository {
     }
 
     @Override
-    public JobInfo findJob(String correlationKey) {
+    public JobInfo findJob(final String correlationKey) {
+
+        this.streamBridge.send(TOPIC_NAME_DEFAULT,
+            new ProducerRecord<>(TOPIC_NAME_DEFAULT, correlationKey.getBytes(), null));
+
         return this.jobIntances.remove(correlationKey);
     }
 }
