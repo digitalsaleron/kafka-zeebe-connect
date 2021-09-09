@@ -37,6 +37,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.TopicConfig;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,11 +59,11 @@ import org.springframework.stereotype.Repository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.google.common.collect.Maps;
 
 import vn.ds.study.application.builder.KafkaConsumerBuilder;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
-import vn.ds.study.infrastructure.properties.PollerProperties;
 import vn.ds.study.model.JobInfo;
 
 @Repository
@@ -79,9 +81,6 @@ public class JobRepositoryImpl implements JobRepository {
     
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private PollerProperties pollerProperties;
 
     @Autowired
     private StreamBridge streamBridge;
@@ -108,7 +107,7 @@ public class JobRepositoryImpl implements JobRepository {
             (String) properties.getProperty(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "300000"));
 
         this.createNewTopicIfNecessary(properties, topicName);
-        
+
         final KafkaConsumer<byte[], byte[]> kafkaConsumer = KafkaConsumerBuilder.prepare(properties).build();
 
         final Map<Integer, TopicPartition> partitions = this.getTopicPartitions(topicName, kafkaConsumer);
@@ -132,7 +131,7 @@ public class JobRepositoryImpl implements JobRepository {
                     final ObjectReader reader = objectMapper.reader();
                     JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) record.value()));
                     JobInfo jobInfo = objectMapper.treeToValue(jsonNode, JobInfo.class);
-                    
+
                     this.jobIntances.put(key, jobInfo);
                     LOGGER.info("Loaded message key {} and message value {}", key, jsonNode);
                 }
@@ -165,9 +164,11 @@ public class JobRepositoryImpl implements JobRepository {
             if (!topicNames.contains(topicName)) {
                 final int minPartition = this.kafkaBinderConfigurationProperties.getMinPartitionCount();
                 final short replicationFactor = this.kafkaBinderConfigurationProperties.getReplicationFactor();
+                final Map<String, String> configs = new HashMap<>();
+                configs.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT);
+
                 final NewTopic topic = new NewTopic(topicName, minPartition, replicationFactor);
-                topic.configs(this.kafkaExtendedBindingProperties.getBindings().get(
-                    BINDING_NAME_DEFAULT).getConsumer().getTopic().getProperties());
+                topic.configs(configs);
 
                 final CreateTopicsResult result = admin.createTopics(Collections.singleton(topic));
 
@@ -187,6 +188,10 @@ public class JobRepositoryImpl implements JobRepository {
 
         properties.putAll(kafkaBinderConfigurationProperties.mergedConsumerConfiguration());
 
+        properties.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT);
+        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+
         final Map<String, BinderProperties> binderProperties = this.bindingServiceProperties.getBinders();
         final Map<String, Object> binderAddresses = new HashMap<>();
         binderProperties.forEach((key, value) -> {
@@ -195,13 +200,16 @@ public class JobRepositoryImpl implements JobRepository {
         binderAddresses.forEach((key, value) -> {
             properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, value);
         });
-        
-        if(bindingProperties != null && bindingProperties.getGroup() != null) {
+
+        if (bindingProperties != null && bindingProperties.getGroup() != null) {
             properties.put(ConsumerConfig.GROUP_ID_CONFIG, bindingProperties.getGroup());
+        } else {
+            properties.put(ConsumerConfig.GROUP_ID_CONFIG, GROUP_NAME_DEFAULT);
         }
+
         return properties;
     }
-
+    
     private boolean hasReadToEndOffsets(
         final Map<TopicPartition, Long> endOffsets,
         final KafkaConsumer<byte[], byte[]> consumer) {

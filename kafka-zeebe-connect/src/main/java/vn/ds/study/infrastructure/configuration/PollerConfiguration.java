@@ -143,18 +143,19 @@ public class PollerConfiguration {
             final String consumerTopicSuffix = consumerTopicProperties.getSuffix();
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
             final String consumerName = topicPrefix;
-            
+
             JsonNode node = objectMapper.convertValue(job, JsonNode.class);
-            vn.ds.study.model.ActivatedJob activatedJob = objectMapper.treeToValue(node, vn.ds.study.model.ActivatedJob.class);     
-            
+            vn.ds.study.model.ActivatedJob activatedJob = objectMapper.treeToValue(node,
+                vn.ds.study.model.ActivatedJob.class);
+
             jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), activatedJob));
-            
-            if(!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
+
+            if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
                         zeebeClient, pollerProperties.getCorrelationKey());
-                    KafkaConsumerBuilder.prepare(targetFactory, bindingService,
-                        messageHandler, topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
+                    KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
+                        topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
                 } catch (Exception e) {
                     LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
                     kafkaConsumerManager.removeConsumer(consumerName);
