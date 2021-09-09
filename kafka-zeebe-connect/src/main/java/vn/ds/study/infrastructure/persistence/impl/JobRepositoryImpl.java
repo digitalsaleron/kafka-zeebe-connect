@@ -168,9 +168,9 @@ public class JobRepositoryImpl implements JobRepository {
                 configs.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT);
                 configs.put(TopicConfig.DELETE_RETENTION_MS_CONFIG, "0");
                 configs.put(TopicConfig.MIN_CLEANABLE_DIRTY_RATIO_CONFIG, "0.01");
-                configs.put(TopicConfig.SEGMENT_MS_CONFIG, "100");
+                configs.put(TopicConfig.SEGMENT_MS_CONFIG, "5000");
                 configs.put(TopicConfig.SEGMENT_BYTES_CONFIG, "1048576");
-                
+                configs.put(TopicConfig.MIN_COMPACTION_LAG_MS_CONFIG, "0");
                 final NewTopic topic = new NewTopic(topicName, minPartition, replicationFactor);
                 topic.configs(configs);
 
