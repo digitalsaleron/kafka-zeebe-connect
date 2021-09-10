@@ -172,7 +172,7 @@ public class JobRepositoryImpl implements JobRepository {
                 configs.put(TopicConfig.MIN_COMPACTION_LAG_MS_CONFIG, "0");
                 final NewTopic topic = new NewTopic(topicName, minPartition, replicationFactor);
                 topic.configs(configs);
-
+                LOGGER.debug("Create the topic properties {}", configs);
                 final CreateTopicsResult result = admin.createTopics(Collections.singleton(topic));
 
                 final KafkaFuture<Void> future = result.values().get(topicName);
@@ -206,7 +206,7 @@ public class JobRepositoryImpl implements JobRepository {
         } else {
             properties.put(ConsumerConfig.GROUP_ID_CONFIG, GROUP_NAME_DEFAULT);
         }
-
+        LOGGER.debug("Create the Kafka consumer properties {}", properties);
         return properties;
     }
 
