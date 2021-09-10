@@ -20,5 +20,7 @@ public interface JobRepositoryJmxMBean {
 
     @ManagedOperation(description = "Returns the number of entries in this repository")
     long size();
+    
+    void reload();
 
 }

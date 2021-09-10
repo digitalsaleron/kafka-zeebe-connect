@@ -62,6 +62,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import vn.ds.study.application.builder.KafkaConsumerBuilder;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.persistence.JobRepositoryJmxMBean;
+import vn.ds.study.infrastructure.properties.JobStorageProperties;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.model.JobInfo;
 
@@ -88,13 +89,13 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     private KafkaBinderConfigurationProperties kafkaBinderConfigurationProperties;
 
     @Autowired
-    private KafkaExtendedBindingProperties kafkaExtendedBindingProperties;
-
-    @Autowired
     private BindingServiceProperties bindingServiceProperties;
 
     @Autowired
     private KafkaTopicProperties jobStorageTopicProperties;
+    
+    @Autowired
+    private JobStorageProperties jobStorageProperties;
 
     @PostConstruct
     @SuppressWarnings("unchecked")
@@ -244,19 +245,24 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     @Override
     public JobInfo getJob(final String correlationKey) {
-
-        final JobInfo jobInfo = this.jobIntances.remove(correlationKey);
-        LOGGER.debug("Remove the job instance {} to cache", jobInfo.getJobId());
-        
+        final JobInfo jobInfo;
+        if (this.jobStorageProperties.isJobRemovalEnabled()) {
+            jobInfo = this.jobIntances.remove(correlationKey);
+        } else {
+            jobInfo = this.jobIntances.get(correlationKey);
+        }
         this.streamBridge.send(TOPIC_NAME_DEFAULT,
             new ProducerRecord<>(TOPIC_NAME_DEFAULT, correlationKey.getBytes(), null));
-
-        LOGGER.debug("Remove the job instance {} to Kafka", jobInfo.getJobId());
         return jobInfo;
     }
 
     @Override
     public long size() {
         return this.jobIntances.size();
+    }
+
+    @Override
+    public void reload() {
+        
     }
 }
