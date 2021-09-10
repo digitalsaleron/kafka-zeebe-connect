@@ -24,6 +24,7 @@ spring:
         applicationMetrics.destination: ${tenant.prefix}.process-metrics
       kafka:
         binder:
+          minPartitionCount: 1
           consumerProperties:
             topic.suffix: -responses
             isolation.level: read_committed
