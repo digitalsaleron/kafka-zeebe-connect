@@ -98,7 +98,7 @@ public class JobRepositoryImpl implements JobRepository {
 
     @PostConstruct
     @SuppressWarnings("unchecked")
-    private void initialize() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    private void initialize() throws IOException, InterruptedException, ExecutionException {
         final Properties properties = this.createProperties();
         final String topicName = jobStorageTopicProperties.getName() != null ? jobStorageTopicProperties.getName()
                 : TOPIC_NAME_DEFAULT;
