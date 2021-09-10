@@ -56,20 +56,21 @@ public class ConsumerMessageHandler implements MessageHandler {
     @Override
     public void handleMessage(Message<?> message) {
         final ObjectReader reader = objectMapper.reader();
+        String key = null;
         try {
             final JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
             final ObjectNode objectNode = (ObjectNode) jsonNode;
-            final String key = objectNode.get(correlationKey).asText();
+            key = objectNode.get(correlationKey).asText();
 
-            final JobInfo jobI = jobRepository.getJob(key);
-            final ActivatedJob job = jobI.getActivatedJob();
+            final JobInfo jobInfo = jobRepository.getJob(key);
+            final ActivatedJob job = jobInfo.getActivatedJob();
 
             final Map<String, Object> variables = objectMapper.convertValue(objectNode,
                 new TypeReference<Map<String, Object>>() {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
         } catch (IOException e) {
-            LOGGER.error("Error while consuming the message. Detail: ", e);
+            LOGGER.error("Error while responding the message with correlation key {}. Detail: ", key, e);
         }
     }
 }

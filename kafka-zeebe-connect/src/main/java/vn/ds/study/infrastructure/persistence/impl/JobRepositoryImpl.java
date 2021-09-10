@@ -99,7 +99,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     private JobStorageProperties jobStorageProperties;
     
     @Autowired
-    private KafkaExtendedBindingProperties kafkaBindingProperties;
+    private KafkaExtendedBindingProperties kafkaExtendedBindingProperties;
 
     @PostConstruct
     @SuppressWarnings("unchecked")
@@ -138,7 +138,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
                     JobInfo jobInfo = objectMapper.treeToValue(jsonNode, JobInfo.class);
 
                     this.jobIntances.put(key, jobInfo);
-                    LOGGER.info("Loaded message key {} and message value {}", key, jsonNode);
+                    LOGGER.debug("Loaded message key {} and message value {}", key, jsonNode);
                 }
             }
         } catch (IOException e) {
@@ -198,7 +198,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
         final BindingProperties bindingProperties = this.bindingServiceProperties.getBindingProperties(
             DEFAULT_BINDING_NAME);
         
-        final KafkaBindingProperties kafkaBindingProperties = this.kafkaBindingProperties.getBindings().get(
+        final KafkaBindingProperties kafkaBindingProperties = this.kafkaExtendedBindingProperties.getBindings().get(
             DEFAULT_BINDING_NAME);
 
         final Properties properties = new Properties();
@@ -278,6 +278,6 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     @Override
     public void reload() {
-        
+         
     }
 }
