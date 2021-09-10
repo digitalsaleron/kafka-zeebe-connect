@@ -22,7 +22,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 import javax.annotation.PostConstruct;
 
@@ -62,11 +61,12 @@ import com.fasterxml.jackson.databind.ObjectReader;
 
 import vn.ds.study.application.builder.KafkaConsumerBuilder;
 import vn.ds.study.infrastructure.persistence.JobRepository;
+import vn.ds.study.infrastructure.persistence.JobRepositoryJmxMBean;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.model.JobInfo;
 
 @Repository("jobRepository")
-public class JobRepositoryImpl implements JobRepository {
+public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JobRepositoryImpl.class);
 
@@ -224,7 +224,7 @@ public class JobRepositoryImpl implements JobRepository {
         if (value instanceof Map) {
             ((Map<Object, Object>) value).forEach(
                 (k, v) -> flatten((propertyName != null ? propertyName + "." : "") + k, v, binderProperties));
-        } else {
+        } else {    
             binderProperties.put(propertyName, value.toString());
         }
     }
@@ -243,7 +243,7 @@ public class JobRepositoryImpl implements JobRepository {
     }
 
     @Override
-    public JobInfo findJob(final String correlationKey) {
+    public JobInfo getJob(final String correlationKey) {
 
         final JobInfo jobInfo = this.jobIntances.remove(correlationKey);
         LOGGER.debug("Remove the job instance {} to cache", jobInfo.getJobId());
@@ -253,5 +253,10 @@ public class JobRepositoryImpl implements JobRepository {
 
         LOGGER.debug("Remove the job instance {} to Kafka", jobInfo.getJobId());
         return jobInfo;
+    }
+
+    @Override
+    public long size() {
+        return this.jobIntances.size();
     }
 }

@@ -61,7 +61,7 @@ public class ConsumerMessageHandler implements MessageHandler {
             final ObjectNode objectNode = (ObjectNode) jsonNode;
             final String key = objectNode.get(correlationKey).asText();
 
-            final JobInfo jobI = jobRepository.findJob(key);
+            final JobInfo jobI = jobRepository.getJob(key);
             final ActivatedJob job = jobI.getActivatedJob();
 
             final Map<String, Object> variables = objectMapper.convertValue(objectNode,
