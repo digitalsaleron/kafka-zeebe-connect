@@ -74,11 +74,11 @@ public class JobRepositoryImpl implements JobRepository {
     private static final String BINDING_NAME_DEFAULT = "job-stogare-in-0";
 
     private static final String TOPIC_NAME_DEFAULT = "_job-instances";
-    
+
     private static final String GROUP_NAME_DEFAULT = "job-instance-manager";
 
     private Map<String, JobInfo> jobIntances = new ConcurrentHashMap<>();
-    
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -93,7 +93,7 @@ public class JobRepositoryImpl implements JobRepository {
 
     @Autowired
     private BindingServiceProperties bindingServiceProperties;
-    
+
     @Autowired
     private KafkaTopicProperties jobStorageTopicProperties;
 
@@ -194,7 +194,7 @@ public class JobRepositoryImpl implements JobRepository {
 
         properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-        
+
         final Map<String, BinderProperties> binderProperties = this.bindingServiceProperties.getBinders();
         final Map<String, Object> binderAddresses = new HashMap<>();
         binderProperties.forEach((key, value) -> {
@@ -212,7 +212,7 @@ public class JobRepositoryImpl implements JobRepository {
 
         return properties;
     }
-    
+
     private boolean hasReadToEndOffsets(
         final Map<TopicPartition, Long> endOffsets,
         final KafkaConsumer<byte[], byte[]> consumer) {
@@ -236,7 +236,8 @@ public class JobRepositoryImpl implements JobRepository {
 
         final Map<String, Object> headers = new HashMap<>();
         headers.put(KafkaHeaders.MESSAGE_KEY, jobInfo.getCorrelationKey().getBytes());
-        Message<?> message = MessageBuilder.createMessage(jobInfo, new MessageHeaders(headers));
+        final Message<?> message = MessageBuilder.createMessage(jobInfo, new MessageHeaders(headers));
+
         this.streamBridge.send(TOPIC_NAME_DEFAULT, message);
     }
 
