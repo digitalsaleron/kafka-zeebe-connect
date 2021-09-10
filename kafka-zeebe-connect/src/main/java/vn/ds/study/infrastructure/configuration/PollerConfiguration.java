@@ -138,7 +138,9 @@ public class PollerConfiguration {
         @Override
         public void handle(final JobClient client, final ActivatedJob job) throws Exception {
             final Map<String, Object> variablesAsMap = job.getVariablesAsMap();
-
+            String jobKeyAsString = String.valueOf(job.getKey());
+            variablesAsMap.put("eventId", jobKeyAsString);
+            
             final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
             final String topicPrefix = job.getElementId();
             final String producerTopicSuffix = producerTopicProperties.getSuffix();

@@ -31,14 +31,14 @@ spring:
             max.poll.interval.ms: 300000
           producerProperties:
             topic.suffix: -requests
-#          transaction:
-#            transaction-id-prefix: kafka-connect-${random.uuid}-
-#            producer:
-#              configuration:
-#                max.in.flight.requests.per.connection: 1
-#                retries: 1
-#                acks: all
-#                enable.idempotence: true
+          transaction:
+            transaction-id-prefix: kafka-connect-${random.uuid}-
+            producer:
+              configuration:
+                max.in.flight.requests.per.connection: 1
+                retries: 1
+                acks: all
+                enable.idempotence: true
 logging:
   file:
     name: ./logs/${spring.application.name}.log
@@ -83,5 +83,5 @@ zeebe.client:
     maxJobsActive: 1
     threads: 1
   poller:
-    correlationKey: ticketId
+    correlationKey: eventId
     jobType: ticketProcessing
