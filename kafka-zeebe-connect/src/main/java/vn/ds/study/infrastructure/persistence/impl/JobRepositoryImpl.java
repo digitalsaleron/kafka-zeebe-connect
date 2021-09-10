@@ -44,6 +44,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
+import org.springframework.cloud.stream.binder.kafka.properties.KafkaBindingProperties;
+import org.springframework.cloud.stream.binder.kafka.properties.KafkaExtendedBindingProperties;
 import org.springframework.cloud.stream.config.BinderProperties;
 import org.springframework.cloud.stream.config.BindingProperties;
 import org.springframework.cloud.stream.config.BindingServiceProperties;
@@ -70,11 +72,11 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JobRepositoryImpl.class);
 
-    private static final String BINDING_NAME_DEFAULT = "job-stogare-in-0";
+    private static final String DEFAULT_BINDING_NAME = "job-storage-in-0";
 
-    private static final String TOPIC_NAME_DEFAULT = "__job-instances";
+    private static final String DEFAULT_TOPIC_NAME = "__job-instances";
 
-    private static final String GROUP_NAME_DEFAULT = "job-instance-manager";
+    private static final String DEFAULT_GROUP_NAME = "job-instance-manager";
 
     private Map<String, JobInfo> jobIntances = new ConcurrentHashMap<>();
 
@@ -95,6 +97,9 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     
     @Autowired
     private JobStorageProperties jobStorageProperties;
+    
+    @Autowired
+    private KafkaExtendedBindingProperties kafkaBindingProperties;
 
     @PostConstruct
     @SuppressWarnings("unchecked")
@@ -102,7 +107,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
         //TODO: there should be a timeout mechanism when this initialization is stuck
         final Properties properties = this.createProperties();
         final String topicName = jobStorageTopicProperties.getName() != null ? jobStorageTopicProperties.getName()
-                : TOPIC_NAME_DEFAULT;
+                : DEFAULT_TOPIC_NAME;
         final long maxPollInterval = Long.parseLong(
             (String) properties.getProperty(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "300000"));
 
@@ -118,8 +123,8 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
         final Set<TopicPartition> assignment = kafkaConsumer.assignment();
         final Map<TopicPartition, Long> endOffsets = kafkaConsumer.endOffsets(assignment);
 
-        while (!hasReadToEndOffsets(endOffsets, kafkaConsumer)) {
-            try {
+        try {
+            while (!hasReadToEndOffsets(endOffsets, kafkaConsumer)) {
                 ConsumerRecords<byte[], byte[]> records = kafkaConsumer.poll(Duration.ofMillis(maxPollInterval));
                 for (ConsumerRecord<byte[], byte[]> record : records) {
 
@@ -135,9 +140,10 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
                     this.jobIntances.put(key, jobInfo);
                     LOGGER.info("Loaded message key {} and message value {}", key, jsonNode);
                 }
-            } catch (IOException e) {
-                LOGGER.error("Error while loading messages from Kafka. Detail: ", e);
             }
+        } catch (IOException e) {
+            LOGGER.error("Error while loading messages from Kafka. Detail: ", e);
+            throw e;
         }
         kafkaConsumer.close();
     }
@@ -164,16 +170,21 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
             if (!topicNames.contains(topicName)) {
                 final int minPartition = this.kafkaBinderConfigurationProperties.getMinPartitionCount();
                 final short replicationFactor = this.kafkaBinderConfigurationProperties.getReplicationFactor();
-                //TODO: remove hard code
                 final Map<String, String> configs = new HashMap<>();
-                configs.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT);
-                configs.put(TopicConfig.DELETE_RETENTION_MS_CONFIG, "0");
-                configs.put(TopicConfig.MIN_CLEANABLE_DIRTY_RATIO_CONFIG, "0.01");
-                configs.put(TopicConfig.SEGMENT_MS_CONFIG, "5000");
-                configs.put(TopicConfig.SEGMENT_BYTES_CONFIG, "1048576");
-                configs.put(TopicConfig.MIN_COMPACTION_LAG_MS_CONFIG, "0");
-                final NewTopic topic = new NewTopic(topicName, minPartition, replicationFactor);
-                topic.configs(configs);
+                configs.put(TopicConfig.CLEANUP_POLICY_CONFIG,
+                    properties.getProperty(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT));
+                configs.put(TopicConfig.DELETE_RETENTION_MS_CONFIG,
+                    properties.getProperty(TopicConfig.DELETE_RETENTION_MS_CONFIG, "0"));
+                configs.put(TopicConfig.MIN_CLEANABLE_DIRTY_RATIO_CONFIG,
+                    properties.getProperty(TopicConfig.MIN_CLEANABLE_DIRTY_RATIO_CONFIG, "0.5"));
+                configs.put(TopicConfig.SEGMENT_MS_CONFIG,
+                    properties.getProperty(TopicConfig.SEGMENT_MS_CONFIG, "3600000"));
+                configs.put(TopicConfig.SEGMENT_BYTES_CONFIG,
+                    properties.getProperty(TopicConfig.SEGMENT_BYTES_CONFIG, "1048576"));
+                configs.put(TopicConfig.MIN_COMPACTION_LAG_MS_CONFIG,
+                    properties.getProperty(TopicConfig.MIN_COMPACTION_LAG_MS_CONFIG, "0"));
+                final NewTopic topic = new NewTopic(topicName, minPartition, replicationFactor).configs(configs);
+
                 LOGGER.debug("Create the topic properties {}", configs);
                 final CreateTopicsResult result = admin.createTopics(Collections.singleton(topic));
 
@@ -185,7 +196,10 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     private Properties createProperties() {
         final BindingProperties bindingProperties = this.bindingServiceProperties.getBindingProperties(
-            BINDING_NAME_DEFAULT);
+            DEFAULT_BINDING_NAME);
+        
+        final KafkaBindingProperties kafkaBindingProperties = this.kafkaBindingProperties.getBindings().get(
+            DEFAULT_BINDING_NAME);
 
         final Properties properties = new Properties();
 
@@ -206,7 +220,11 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
         if (bindingProperties != null && bindingProperties.getGroup() != null) {
             properties.put(ConsumerConfig.GROUP_ID_CONFIG, bindingProperties.getGroup());
         } else {
-            properties.put(ConsumerConfig.GROUP_ID_CONFIG, GROUP_NAME_DEFAULT);
+            properties.put(ConsumerConfig.GROUP_ID_CONFIG, DEFAULT_GROUP_NAME);
+        }
+        if (kafkaBindingProperties != null && kafkaBindingProperties.getConsumer() != null
+                && kafkaBindingProperties.getConsumer().getTopic() != null) {
+            properties.putAll(kafkaBindingProperties.getConsumer().getTopic().getProperties());
         }
         LOGGER.debug("Create the Kafka consumer properties {}", properties);
         return properties;
@@ -232,14 +250,12 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     @Override
     public void addJob(JobInfo jobInfo) {
         this.jobIntances.put(jobInfo.getCorrelationKey(), jobInfo);
-        LOGGER.debug("Add the job instance {} to cache", jobInfo.getJobId());
 
         final Map<String, Object> headers = new HashMap<>();
         headers.put(KafkaHeaders.MESSAGE_KEY, jobInfo.getCorrelationKey().getBytes());
         final Message<?> message = MessageBuilder.createMessage(jobInfo, new MessageHeaders(headers));
         
-        this.streamBridge.send(TOPIC_NAME_DEFAULT, message);
-        LOGGER.debug("Add the job instance {} to Kafka", jobInfo.getJobId());
+        this.streamBridge.send(DEFAULT_TOPIC_NAME, message);
     }
 
     @Override
@@ -250,8 +266,8 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
         } else {
             jobInfo = this.jobIntances.get(correlationKey);
         }
-        this.streamBridge.send(TOPIC_NAME_DEFAULT,
-            new ProducerRecord<>(TOPIC_NAME_DEFAULT, correlationKey.getBytes(), null));
+        this.streamBridge.send(DEFAULT_TOPIC_NAME,
+            new ProducerRecord<>(DEFAULT_TOPIC_NAME, correlationKey.getBytes(), null));
         return jobInfo;
     }
 
