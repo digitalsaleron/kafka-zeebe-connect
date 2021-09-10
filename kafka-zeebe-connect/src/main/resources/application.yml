@@ -23,12 +23,6 @@ spring:
       bindings:
         applicationMetrics.destination: ${tenant.prefix}.process-metrics
       kafka:
-        bindings:
-          job-stogare-in-0:
-            consumer:
-              topic.properties:
-                cleanup.policy: compact
-                name: __job-instances
         binder:
           consumerProperties:
             topic.suffix: -responses
