@@ -65,7 +65,7 @@ import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.model.JobInfo;
 
-@Repository
+@Repository("jobRepository")
 public class JobRepositoryImpl implements JobRepository {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JobRepositoryImpl.class);

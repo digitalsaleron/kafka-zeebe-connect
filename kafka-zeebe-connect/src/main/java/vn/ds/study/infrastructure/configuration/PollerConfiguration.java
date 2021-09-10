@@ -26,6 +26,7 @@ import org.springframework.cloud.stream.binding.AbstractBindingTargetFactory;
 import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 
@@ -48,6 +49,7 @@ import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.infrastructure.properties.PollerProperties;
 import vn.ds.study.model.JobInfo;
 
+@DependsOn(value = {"jobRepository"})
 @Configuration
 @EnableConfigurationProperties(value = { PollerProperties.class, KafkaBinderConfigurationProperties.class, KafkaExtendedBindingProperties.class})
 public class PollerConfiguration {
