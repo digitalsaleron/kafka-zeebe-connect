@@ -164,6 +164,7 @@ public class JobRepositoryImpl implements JobRepository {
             if (!topicNames.contains(topicName)) {
                 final int minPartition = this.kafkaBinderConfigurationProperties.getMinPartitionCount();
                 final short replicationFactor = this.kafkaBinderConfigurationProperties.getReplicationFactor();
+                //TODO: remove hard code
                 final Map<String, String> configs = new HashMap<>();
                 configs.put(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT);
                 configs.put(TopicConfig.DELETE_RETENTION_MS_CONFIG, "0");
