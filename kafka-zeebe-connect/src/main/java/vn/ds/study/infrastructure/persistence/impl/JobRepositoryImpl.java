@@ -73,7 +73,7 @@ public class JobRepositoryImpl implements JobRepository {
 
     private static final String BINDING_NAME_DEFAULT = "job-stogare-in-0";
 
-    private static final String TOPIC_NAME_DEFAULT = "_job-instances";
+    private static final String TOPIC_NAME_DEFAULT = "__job-instances";
 
     private static final String GROUP_NAME_DEFAULT = "job-instance-manager";
 
@@ -184,8 +184,6 @@ public class JobRepositoryImpl implements JobRepository {
 
     private Properties createProperties() {
         final BindingProperties bindingProperties = this.bindingServiceProperties.getBindingProperties(
-            BINDING_NAME_DEFAULT);
-        final KafkaBindingProperties kafkaBindingProperties = kafkaExtendedBindingProperties.getBindings().get(
             BINDING_NAME_DEFAULT);
 
         final Properties properties = new Properties();
