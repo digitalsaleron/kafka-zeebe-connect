@@ -1,19 +1,23 @@
 package vn.ds.study.model;
 
-import io.camunda.zeebe.client.api.response.ActivatedJob;
-
 public class JobInfo {
+    
+    private String correlationKey;
+    
 	private long instanceId;
-	private long jobId;
-	private ActivatedJob activatedJob;
 
-	public static JobInfo from(long instanceId, long jobId,
+	private long jobId;
+	
+	private ActivatedJob activatedJob;
+	
+	public static JobInfo from(String ticketId, long instanceId, long jobId,
 	        ActivatedJob activatedJob) {
-		return new JobInfo(instanceId, jobId, activatedJob);
+		return new JobInfo(ticketId, instanceId, jobId, activatedJob);
 	}
 
-	private JobInfo(long instanceId, long jobId, ActivatedJob activatedJob) {
+	private JobInfo(String correlationKey, long instanceId, long jobId, ActivatedJob activatedJob) {
 		super();
+		this.correlationKey = correlationKey;
 		this.instanceId = instanceId;
 		this.jobId = jobId;
 		this.activatedJob = activatedJob;
@@ -43,4 +47,7 @@ public class JobInfo {
 		this.activatedJob = activatedJob;
 	}
 
+    public String getCorrelationKey() {
+        return correlationKey;
+    }
 }
