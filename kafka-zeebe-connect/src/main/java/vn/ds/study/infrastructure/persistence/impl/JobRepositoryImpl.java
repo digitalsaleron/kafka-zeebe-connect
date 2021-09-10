@@ -244,9 +244,11 @@ public class JobRepositoryImpl implements JobRepository {
     @Override
     public JobInfo findJob(final String correlationKey) {
 
+        final JobInfo jobInfo = this.jobIntances.remove(correlationKey);
+
         this.streamBridge.send(TOPIC_NAME_DEFAULT,
             new ProducerRecord<>(TOPIC_NAME_DEFAULT, correlationKey.getBytes(), null));
 
-        return this.jobIntances.remove(correlationKey);
+        return jobInfo;
     }
 }

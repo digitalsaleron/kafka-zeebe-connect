@@ -41,9 +41,9 @@ public class ConsumerMessageHandler implements MessageHandler {
     private ObjectMapper objectMapper;
 
     private ZeebeClient client;
-    
+
     private String correlationKey;
-    
+
     public ConsumerMessageHandler(JobRepository jobRepository, ObjectMapper objectMapper, ZeebeClient client,
             String correlationKey) {
         super();
@@ -57,7 +57,7 @@ public class ConsumerMessageHandler implements MessageHandler {
     public void handleMessage(Message<?> message) {
         final ObjectReader reader = objectMapper.reader();
         try {
-            JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
+            final JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
             final ObjectNode objectNode = (ObjectNode) jsonNode;
             final String key = objectNode.get(correlationKey).asText();
 
