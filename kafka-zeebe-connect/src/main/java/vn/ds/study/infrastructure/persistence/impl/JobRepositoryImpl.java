@@ -135,7 +135,7 @@ public class JobRepositoryImpl implements JobRepository {
                     LOGGER.info("Loaded message key {} and message value {}", key, jsonNode);
                 }
             } catch (IOException e) {
-                LOGGER.info("Error while loading messages from Kafka. Detail: ", e);
+                LOGGER.error("Error while loading messages from Kafka. Detail: ", e);
             }
         }
         kafkaConsumer.close();
@@ -230,22 +230,26 @@ public class JobRepositoryImpl implements JobRepository {
     @Override
     public void addJob(JobInfo jobInfo) {
         this.jobIntances.put(jobInfo.getCorrelationKey(), jobInfo);
+        LOGGER.debug("Add the job instance {} to cache", jobInfo.getJobId());
 
         final Map<String, Object> headers = new HashMap<>();
         headers.put(KafkaHeaders.MESSAGE_KEY, jobInfo.getCorrelationKey().getBytes());
         final Message<?> message = MessageBuilder.createMessage(jobInfo, new MessageHeaders(headers));
-
+        
         this.streamBridge.send(TOPIC_NAME_DEFAULT, message);
+        LOGGER.debug("Add the job instance {} to Kafka", jobInfo.getJobId());
     }
 
     @Override
     public JobInfo findJob(final String correlationKey) {
 
         final JobInfo jobInfo = this.jobIntances.remove(correlationKey);
-
+        LOGGER.debug("Remove the job instance {} to cache", jobInfo.getJobId());
+        
         this.streamBridge.send(TOPIC_NAME_DEFAULT,
             new ProducerRecord<>(TOPIC_NAME_DEFAULT, correlationKey.getBytes(), null));
 
+        LOGGER.debug("Remove the job instance {} to Kafka", jobInfo.getJobId());
         return jobInfo;
     }
 }
