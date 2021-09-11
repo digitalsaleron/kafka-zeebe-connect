@@ -143,7 +143,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
                     LOGGER.debug("Loaded message key {} and message value {}", key, jsonNode);
                 }
             }
-            LOGGER.info("Completed job storage initialization. Loaded {} job instance from Kafka", this.jobIntances.size());
+            LOGGER.info("Completed job storage initialization. Loaded {} job instances from Kafka", this.jobIntances.size());
         } catch (IOException e) {
             LOGGER.error("Error while loading messages from Kafka. Detail: ", e);
             throw e;
@@ -292,6 +292,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
             this.initialize();
         } catch (IOException | InterruptedException | ExecutionException e) {
             LOGGER.error("Error while initializing the job storage. Detail: ", e);
+            Thread.currentThread().interrupt();
         }
     }
 }
