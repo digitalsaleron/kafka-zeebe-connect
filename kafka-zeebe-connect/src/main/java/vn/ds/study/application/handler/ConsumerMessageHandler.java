@@ -71,6 +71,7 @@ public class ConsumerMessageHandler implements MessageHandler {
                 new TypeReference<Map<String, Object>>() {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
+            LOGGER.info("Send the job instance {} to the workflow engine", key);
         } catch (IOException | JobInstanceNotFoundException e) {
             LOGGER.error("Error while responding the message with correlation key {}. Detail: ", key, e);
         }

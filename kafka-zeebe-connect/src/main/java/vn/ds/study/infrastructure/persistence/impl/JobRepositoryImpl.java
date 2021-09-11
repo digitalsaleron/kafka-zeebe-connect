@@ -143,6 +143,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
                     LOGGER.debug("Loaded message key {} and message value {}", key, jsonNode);
                 }
             }
+            LOGGER.info("Loaded {} job instance from Kafka", this.jobIntances.size());
         } catch (IOException e) {
             LOGGER.error("Error while loading messages from Kafka. Detail: ", e);
             throw e;
@@ -272,10 +273,11 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
             jobInfo = this.jobIntances.remove(correlationKey);
             this.streamBridge.send(this.topicName,
                 new ProducerRecord<>(this.topicName, correlationKey.getBytes(), null));
+            LOGGER.info("Get and remove job instance {} from the job storage", correlationKey);
         } else {
             jobInfo = this.jobIntances.get(correlationKey);
+            LOGGER.info("Get job instance {} from the job storage", correlationKey);
         }
-        LOGGER.info("Get job instance {} from the job storage", correlationKey);
         return jobInfo;
     }
     
