@@ -26,5 +26,9 @@
 			<artifactId>spring-zeebe-starter</artifactId>
 			<version>${spring-zeebe-starter.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.jolokia</groupId>
+			<artifactId>jolokia-core</artifactId>
+		</dependency>
 	</dependencies>
 </project>
