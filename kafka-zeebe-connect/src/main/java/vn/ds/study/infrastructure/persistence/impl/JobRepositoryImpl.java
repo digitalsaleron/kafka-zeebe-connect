@@ -291,7 +291,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
         try {
             this.initialize();
         } catch (IOException | InterruptedException | ExecutionException e) {
-            LOGGER.error("Error while initializing the job storage");
+            LOGGER.error("Error while initializing the job storage. Detail: ", e);
         }
     }
 }
