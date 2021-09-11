@@ -267,7 +267,6 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     @Override
     public JobInfo getJob(final String correlationKey) {
-
         final JobInfo jobInfo;
         if (this.jobStorageProperties.isJobRemovalEnabled()) {
             jobInfo = this.jobIntances.remove(correlationKey);
