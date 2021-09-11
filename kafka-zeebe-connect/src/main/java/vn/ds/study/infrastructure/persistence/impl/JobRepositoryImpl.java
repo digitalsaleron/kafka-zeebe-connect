@@ -262,7 +262,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
             this.streamBridge.send(this.topicName, message);
             return jobInfo;
         });
-        LOGGER.info("Add job instance {} to the job storage", jobInfo.getActivatedJob());
+        LOGGER.info("Add job instance {} to the job storage", jobInfo.getCorrelationKey());
     }
 
     @Override
