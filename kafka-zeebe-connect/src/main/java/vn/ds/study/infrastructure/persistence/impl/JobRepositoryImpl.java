@@ -100,13 +100,15 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     
     @Autowired
     private KafkaExtendedBindingProperties kafkaExtendedBindingProperties;
+    
+    private String topicName;
 
     @PostConstruct
     @SuppressWarnings("unchecked")
     private void initialize() throws IOException, InterruptedException, ExecutionException {
         //TODO: there should be a timeout mechanism when this initialization is stuck
         final Properties properties = this.createProperties();
-        final String topicName = jobStorageTopicProperties.getName() != null ? jobStorageTopicProperties.getName()
+        topicName = jobStorageTopicProperties.getName() != null ? jobStorageTopicProperties.getName()
                 : DEFAULT_TOPIC_NAME;
         final long maxPollInterval = Long.parseLong(
             (String) properties.getProperty(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "300000"));
@@ -249,28 +251,34 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     @Override
     public void addJob(JobInfo jobInfo) {
-        this.jobIntances.put(jobInfo.getCorrelationKey(), jobInfo);
 
-        final Map<String, Object> headers = new HashMap<>();
-        headers.put(KafkaHeaders.MESSAGE_KEY, jobInfo.getCorrelationKey().getBytes());
-        final Message<?> message = MessageBuilder.createMessage(jobInfo, new MessageHeaders(headers));
-        
-        this.streamBridge.send(DEFAULT_TOPIC_NAME, message);
+        this.jobIntances.compute(jobInfo.getCorrelationKey(), (key, value) -> {
+
+            final Map<String, Object> headers = new HashMap<>();
+            headers.put(KafkaHeaders.MESSAGE_KEY, jobInfo.getCorrelationKey().getBytes());
+            final Message<?> message = MessageBuilder.createMessage(jobInfo, new MessageHeaders(headers));
+
+            this.streamBridge.send(this.topicName, message);
+            return jobInfo;
+        });
+        LOGGER.info("Add job instance {} to the job storage", jobInfo.getActivatedJob());
     }
 
     @Override
     public JobInfo getJob(final String correlationKey) {
+
         final JobInfo jobInfo;
         if (this.jobStorageProperties.isJobRemovalEnabled()) {
             jobInfo = this.jobIntances.remove(correlationKey);
+            this.streamBridge.send(this.topicName,
+                new ProducerRecord<>(this.topicName, correlationKey.getBytes(), null));
         } else {
             jobInfo = this.jobIntances.get(correlationKey);
         }
-        this.streamBridge.send(DEFAULT_TOPIC_NAME,
-            new ProducerRecord<>(DEFAULT_TOPIC_NAME, correlationKey.getBytes(), null));
+        LOGGER.info("Get job instance {} from the job storage", correlationKey);
         return jobInfo;
     }
-
+    
     @Override
     public long size() {
         return this.jobIntances.size();

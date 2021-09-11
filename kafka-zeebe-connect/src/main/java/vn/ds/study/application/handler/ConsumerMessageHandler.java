@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import vn.ds.study.application.exception.JobInstanceNotFoundException;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.model.ActivatedJob;
 import vn.ds.study.model.JobInfo;
@@ -63,14 +64,21 @@ public class ConsumerMessageHandler implements MessageHandler {
             key = objectNode.get(correlationKey).asText();
 
             final JobInfo jobInfo = jobRepository.getJob(key);
+            this.validateJobInfo(jobInfo, key);
             final ActivatedJob job = jobInfo.getActivatedJob();
 
             final Map<String, Object> variables = objectMapper.convertValue(objectNode,
                 new TypeReference<Map<String, Object>>() {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
-        } catch (IOException e) {
+        } catch (IOException | JobInstanceNotFoundException e) {
             LOGGER.error("Error while responding the message with correlation key {}. Detail: ", key, e);
+        }
+    }
+
+    private void validateJobInfo(JobInfo jobInfo, String key) throws JobInstanceNotFoundException {
+        if (jobInfo == null) {
+            throw new JobInstanceNotFoundException(String.format("The job instance %s could not be found", key));
         }
     }
 }
