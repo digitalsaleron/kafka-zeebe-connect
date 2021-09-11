@@ -54,7 +54,7 @@ public class ConsumerMessageHandler implements MessageHandler {
     }
 
     @Override
-    public void handleMessage(Message<?> message) {
+    public void handleMessage(final Message<?> message) {
         final ObjectReader reader = objectMapper.reader();
         String key = null;
         try {
