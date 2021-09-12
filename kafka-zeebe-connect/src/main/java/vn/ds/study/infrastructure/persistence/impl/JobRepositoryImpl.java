@@ -106,7 +106,6 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     @PostConstruct
     @SuppressWarnings("unchecked")
     private void initialize() throws IOException, InterruptedException, ExecutionException {
-        //TODO: there should be a timeout mechanism when this initialization is stuck
         final Properties properties = this.createProperties();
         topicName = jobStorageTopicProperties.getName() != null ? jobStorageTopicProperties.getName()
                 : DEFAULT_TOPIC_NAME;
@@ -267,19 +266,19 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
 
     @Override
     public JobInfo getJob(final String correlationKey) {
-        final JobInfo jobInfo;
+
+        final JobInfo jobInfo = this.jobIntances.remove(correlationKey);
+
         if (this.jobStorageProperties.isJobRemovalEnabled()) {
-            jobInfo = this.jobIntances.remove(correlationKey);
             this.streamBridge.send(this.topicName,
                 new ProducerRecord<>(this.topicName, correlationKey.getBytes(), null));
             LOGGER.info("Get and remove job instance {} from the job storage", correlationKey);
         } else {
-            jobInfo = this.jobIntances.get(correlationKey);
             LOGGER.info("Get job instance {} from the job storage", correlationKey);
         }
         return jobInfo;
     }
-    
+
     @Override
     public long size() {
         return this.jobIntances.size();

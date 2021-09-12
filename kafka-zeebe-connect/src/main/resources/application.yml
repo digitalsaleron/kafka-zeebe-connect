@@ -87,6 +87,6 @@ zeebe.client:
     correlationKey: eventId
     jobType: ticketProcessing
   job:
-    timeout: 1
+    timeout: 5
 job-storage:
   jobRemovalEnabled: true

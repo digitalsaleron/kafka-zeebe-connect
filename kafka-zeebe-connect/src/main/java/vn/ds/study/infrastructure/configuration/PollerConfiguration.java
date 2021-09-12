@@ -160,6 +160,7 @@ public class PollerConfiguration {
                         zeebeClient, pollerProperties.getCorrelationKey());
                     KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                         topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
+                    LOGGER.info("Created consumer {} to consume topic {}", consumerName, topicName);
                 } catch (Exception e) {
                     LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
                     kafkaConsumerManager.removeConsumer(consumerName);
@@ -168,6 +169,7 @@ public class PollerConfiguration {
                 }
             }
             streamBridge.send(topicName, variablesAsMap);
+            LOGGER.info("Send the message {} - step {} to Kafka", correlationKey, job.getElementId());
         }
     }
 }

@@ -13,7 +13,6 @@
 package vn.ds.study.application.handler;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -71,9 +70,10 @@ public class ConsumerMessageHandler implements MessageHandler {
                 new TypeReference<Map<String, Object>>() {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
-            LOGGER.info("Send the job instance {} to the workflow engine", key);
-        } catch (IOException | JobInstanceNotFoundException e) {
-            LOGGER.error("Error while responding the message with correlation key {}. Detail: ", key, e);
+            LOGGER.info("Consume and send the message {} - step {} to the workflow engine", key,
+                jobInfo.getActivatedJob().getElementId());
+        } catch (Exception e) {
+            LOGGER.error("Error while responding the message with key {}. Detail: ", key, e);
         }
     }
 
