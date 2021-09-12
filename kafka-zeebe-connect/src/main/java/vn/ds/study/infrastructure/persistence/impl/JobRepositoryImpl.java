@@ -50,6 +50,7 @@ import org.springframework.cloud.stream.config.BinderProperties;
 import org.springframework.cloud.stream.config.BindingProperties;
 import org.springframework.cloud.stream.config.BindingServiceProperties;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -66,6 +67,7 @@ import vn.ds.study.infrastructure.persistence.JobRepositoryJmxMBean;
 import vn.ds.study.infrastructure.properties.JobStorageProperties;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.model.JobInfo;
+import vn.ds.study.model.event.ConsumerRecoveryEvent;
 
 @Repository("jobRepository")
 public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
@@ -100,6 +102,9 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     
     @Autowired
     private KafkaExtendedBindingProperties kafkaExtendedBindingProperties;
+    
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
     
     private String topicName;
 
@@ -142,7 +147,10 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
                     LOGGER.debug("Loaded message key {} and message value {}", key, jsonNode);
                 }
             }
-            LOGGER.info("Completed job storage initialization. Loaded {} job instances from Kafka", this.jobIntances.size());
+            LOGGER.info("Completed job storage initialization. Loaded {} job instances from Kafka",
+                this.jobIntances.size());
+
+            this.eventPublisher.publishEvent(new ConsumerRecoveryEvent(this, Collections.unmodifiableMap(jobIntances)));
         } catch (IOException e) {
             LOGGER.error("Error while loading messages from Kafka. Detail: ", e);
             throw e;
