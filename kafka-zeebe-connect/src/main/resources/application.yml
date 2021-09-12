@@ -24,6 +24,7 @@ spring:
         applicationMetrics.destination: ${tenant.prefix}.process-metrics
       kafka:
         binder:
+          minPartitionCount: 1
           consumerProperties:
             topic.suffix: -responses
             isolation.level: read_committed
@@ -85,3 +86,7 @@ zeebe.client:
   poller:
     correlationKey: eventId
     jobType: ticketProcessing
+  job:
+    timeout: 5
+job-storage:
+  jobRemovalEnabled: true

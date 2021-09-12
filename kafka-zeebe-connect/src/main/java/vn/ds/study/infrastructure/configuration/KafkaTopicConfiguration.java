@@ -34,8 +34,8 @@ public class KafkaTopicConfiguration {
     }
     
     @Bean("jobStorageTopicProperties")
-    @ConfigurationProperties(prefix = "spring.cloud.stream.kafka.job-stogare-in-0.consumer.topic.properties")
-    public KafkaTopicProperties getJobStorageTopicProperties() {
+    @ConfigurationProperties(prefix = "spring.cloud.stream.kafka.job-storage-in-0.consumer.topic.properties")
+    KafkaTopicProperties getJobStorageTopicProperties() {
         return new KafkaTopicProperties();
     }
 }

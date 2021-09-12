@@ -13,7 +13,6 @@
 package vn.ds.study.application.handler;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -28,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.camunda.zeebe.client.ZeebeClient;
+import vn.ds.study.application.exception.JobInstanceNotFoundException;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.model.ActivatedJob;
 import vn.ds.study.model.JobInfo;
@@ -54,22 +54,32 @@ public class ConsumerMessageHandler implements MessageHandler {
     }
 
     @Override
-    public void handleMessage(Message<?> message) {
+    public void handleMessage(final Message<?> message) {
         final ObjectReader reader = objectMapper.reader();
+        String key = null;
         try {
             final JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
             final ObjectNode objectNode = (ObjectNode) jsonNode;
-            final String key = objectNode.get(correlationKey).asText();
+            key = objectNode.get(correlationKey).asText();
 
-            final JobInfo jobI = jobRepository.findJob(key);
-            final ActivatedJob job = jobI.getActivatedJob();
+            final JobInfo jobInfo = jobRepository.getJob(key);
+            this.validateJobInfo(jobInfo, key);
+            final ActivatedJob job = jobInfo.getActivatedJob();
 
             final Map<String, Object> variables = objectMapper.convertValue(objectNode,
                 new TypeReference<Map<String, Object>>() {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
-        } catch (IOException e) {
-            LOGGER.error("Error while consuming the message. Detail: ", e);
+            LOGGER.info("Consume and send the message {} - step {} to the workflow engine", key,
+                jobInfo.getActivatedJob().getElementId());
+        } catch (Exception e) {
+            LOGGER.error("Error while responding the message with key {}. Detail: ", key, e);
+        }
+    }
+
+    private void validateJobInfo(JobInfo jobInfo, String key) throws JobInstanceNotFoundException {
+        if (jobInfo == null) {
+            throw new JobInstanceNotFoundException(String.format("The job instance %s could not be found", key));
         }
     }
 }

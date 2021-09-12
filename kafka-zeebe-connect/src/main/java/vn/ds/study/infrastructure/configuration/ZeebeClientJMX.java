@@ -50,7 +50,7 @@ public class ZeebeClientJMX {
     private void registerMbeans() {
         try {
             final MBeanServer mbeanServer = ManagementFactory.getPlatformMBeanServer();
-            final String zeebeClientName = "vn.sps.cdipp.jmx:category=ZeebeClient,name=zeebeClient";
+            final String zeebeClientName = "vn.sps.cdipp.infrastructure.configuration:category=ZeebeClient,name=zeebeClient";
             final ObjectName objectName = new ObjectName(zeebeClientName);
 
             StandardMBean standardMBean = new StandardMBean(this.clientConfigurationProperties,

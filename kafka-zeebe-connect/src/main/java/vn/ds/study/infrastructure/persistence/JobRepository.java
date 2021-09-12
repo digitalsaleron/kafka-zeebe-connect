@@ -14,10 +14,11 @@ package vn.ds.study.infrastructure.persistence;
 
 import vn.ds.study.model.JobInfo;
 
+
 public interface JobRepository {
 
     void addJob(JobInfo jobInfo);
     
-    JobInfo findJob(String correlationKey);
+    JobInfo getJob(String correlationKey);
     
 }
