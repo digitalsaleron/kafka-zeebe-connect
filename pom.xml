@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>vn.ds.study</groupId>
 	<artifactId>kafka-zeebe-connect</artifactId>
-	<version>0.0.4</version>
+	<version>0.0.5</version>
 	<packaging>jar</packaging>
 	<name>kafka-zeebe-connect</name>
 	<description>Transactional processor that reads from topic, put into db and write to another topic transactionally</description>
@@ -89,6 +89,7 @@
 	</dependencies>
 
 	<build>
+	   <finalName>${artifactId}</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
