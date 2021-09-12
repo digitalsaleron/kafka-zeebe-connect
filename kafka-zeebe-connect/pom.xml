@@ -7,8 +7,9 @@
 	<artifactId>kafka-zeebe-connect</artifactId>
 	<packaging>jar</packaging>
 	<name>kafka-zeebe-connect</name>
-	<description>Transactional processor that reads from topic, put into db and write to another topic transactionally
-  </description>
+	<description>Transactional processor that reads from topic, put into db
+		and write to another topic transactionally
+	</description>
 	<properties>
 		<spring-zeebe-starter.version>1.1.0</spring-zeebe-starter.version>
 	</properties>
@@ -24,6 +25,10 @@
 			<groupId>io.camunda</groupId>
 			<artifactId>spring-zeebe-starter</artifactId>
 			<version>${spring-zeebe-starter.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jolokia</groupId>
+			<artifactId>jolokia-core</artifactId>
 		</dependency>
 	</dependencies>
 </project>
