@@ -14,6 +14,8 @@ package vn.ds.study.application.builder;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,8 +87,8 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
         final String consumerTopicSuffix = consumerTopicProperties.getSuffix();
 
         jobInstances.forEach((key, value) -> {
-
-            final String topicPrefix = value.getActivatedJob().getElementId();
+            final String jobElementId = value.getActivatedJob().getElementId();
+            final String topicPrefix = this.detectTopicPrefix(jobElementId);
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
             final String consumerName = topicPrefix;
             if (!findAndAddConsumerIfAbsent(consumerName)) {
@@ -105,5 +107,15 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
             }
         });
         LOGGER.info("Completed recovery of consumers {}", kafkaConsumers.values());
+    }
+    
+    private String detectTopicPrefix(String jobElementId) {
+        final String regex = "(.*)[-_].*$";
+        final String string = jobElementId;
+
+        final Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
+        final Matcher matcher = pattern.matcher(string);
+
+        return matcher.group(1);
     }
 }
