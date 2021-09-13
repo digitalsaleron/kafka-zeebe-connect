@@ -108,12 +108,16 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
     }
     
     private String detectTopicPrefix(String jobElementId) {
-        final String regex = "(.*)[-_].*$";
-        final String string = jobElementId;
+        if (consumerTopicProperties.isPrefixIsPattern()) {
+            final String regex = consumerTopicProperties.getPrefix();
+            final String string = jobElementId;
 
-        final Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
-        final Matcher matcher = pattern.matcher(string);
-        matcher.find();
-        return matcher.group(1);
+            final Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
+            final Matcher matcher = pattern.matcher(string);
+            matcher.find();
+            return matcher.group(1);
+        } else {
+            return jobElementId;
+        }
     }
 }
