@@ -30,7 +30,6 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import io.camunda.zeebe.client.impl.ZeebeClientBuilderImpl;
 import vn.ds.study.application.handler.ConsumerMessageHandler;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
@@ -55,7 +54,7 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
     private ObjectMapper objectMapper;
     
     @Autowired
-    private ZeebeClientBuilderImpl zeebeClientBuilder;
+    private ZeebeClient zeebeClient;
 
     @Autowired
     private PollerProperties pollerProperties;
@@ -81,7 +80,6 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
     public void onApplicationEvent(ConsumerRecoveryEvent event) {
 
         final JobRepository jobRepository = event.getJobRepository();
-        final ZeebeClient zeebeClient = this.zeebeClientBuilder.build();
         final Map<String, JobInfo> jobInstances = event.getJobIntances();
         final String producerTopicSuffix = producerTopicProperties.getSuffix();
         final String consumerTopicSuffix = consumerTopicProperties.getSuffix();
@@ -115,7 +113,7 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
 
         final Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
         final Matcher matcher = pattern.matcher(string);
-
+        matcher.find();
         return matcher.group(1);
     }
 }

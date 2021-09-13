@@ -82,7 +82,7 @@ public class PollerConfiguration {
 
     public PollerConfiguration(PollerProperties pollerProperties, JobRepository jobRepository,
             KafkaConsumerManager kafkaConsumerManager, ZeebeClientBuilderImpl zeebeClientBuilder,
-            StreamBridge streamBridge, ObjectMapper objectMapper,
+            ZeebeClient zeebeClient, StreamBridge streamBridge, ObjectMapper objectMapper,
             AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService,
             KafkaTopicProperties consumerTopicProperties, KafkaTopicProperties producerTopicProperties) {
         super();
@@ -96,7 +96,7 @@ public class PollerConfiguration {
         this.bindingService = bindingService;
         this.consumerTopicProperties = consumerTopicProperties;
         this.producerTopicProperties = producerTopicProperties;
-        this.zeebeClient = this.zeebeClientBuilder.build();
+        this.zeebeClient = zeebeClient;
     }
 
     @PostConstruct
@@ -181,7 +181,7 @@ public class PollerConfiguration {
 
             final Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
             final Matcher matcher = pattern.matcher(string);
-
+            matcher.find();
             return matcher.group(1);
         }
     }
