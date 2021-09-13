@@ -19,6 +19,8 @@ public class KafkaTopicProperties {
     private String prefix;
     
     private String name;
+    
+    private boolean prefixIsPattern;
 
     public String getSuffix() {
         return suffix;
@@ -42,5 +44,13 @@ public class KafkaTopicProperties {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public boolean isPrefixIsPattern() {
+        return prefixIsPattern;
+    }
+
+    public void setPrefixIsPattern(boolean prefixIsPattern) {
+        this.prefixIsPattern = prefixIsPattern;
     }
 }
