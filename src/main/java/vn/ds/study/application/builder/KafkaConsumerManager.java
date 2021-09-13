@@ -17,5 +17,5 @@ public interface KafkaConsumerManager {
     boolean findAndAddConsumerIfAbsent(String consumerName);
 
     String removeConsumer(String consumerName);
-
+    
 }

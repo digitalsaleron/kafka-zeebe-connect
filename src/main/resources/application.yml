@@ -89,4 +89,4 @@ zeebe.client:
   job:
     timeout: 5
 job-storage:
-  jobRemovalEnabled: true
+  jobRemovalEnabled: false

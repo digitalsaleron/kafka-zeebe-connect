@@ -14,6 +14,8 @@ package vn.ds.study.infrastructure.configuration;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.PostConstruct;
 
@@ -80,7 +82,7 @@ public class PollerConfiguration {
 
     public PollerConfiguration(PollerProperties pollerProperties, JobRepository jobRepository,
             KafkaConsumerManager kafkaConsumerManager, ZeebeClientBuilderImpl zeebeClientBuilder,
-            StreamBridge streamBridge, ObjectMapper objectMapper,
+            ZeebeClient zeebeClient, StreamBridge streamBridge, ObjectMapper objectMapper,
             AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService,
             KafkaTopicProperties consumerTopicProperties, KafkaTopicProperties producerTopicProperties) {
         super();
@@ -94,7 +96,7 @@ public class PollerConfiguration {
         this.bindingService = bindingService;
         this.consumerTopicProperties = consumerTopicProperties;
         this.producerTopicProperties = producerTopicProperties;
-        this.zeebeClient = this.zeebeClientBuilder.build();
+        this.zeebeClient = zeebeClient;
     }
 
     @PostConstruct
@@ -142,7 +144,8 @@ public class PollerConfiguration {
             variablesAsMap.put("eventId", jobKeyAsString);
             
             final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
-            final String topicPrefix = job.getElementId();
+            final String topicPrefix = detectTopicPrefix(job.getElementId());
+            
             final String producerTopicSuffix = producerTopicProperties.getSuffix();
             final String consumerTopicSuffix = consumerTopicProperties.getSuffix();
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
@@ -170,6 +173,16 @@ public class PollerConfiguration {
             }
             streamBridge.send(topicName, variablesAsMap);
             LOGGER.info("Send the message {} - step {} to Kafka", correlationKey, job.getElementId());
+        }
+        
+        private String detectTopicPrefix(String jobElementId) {
+            final String regex = "(.*)[-_].*$";
+            final String string = jobElementId;
+
+            final Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
+            final Matcher matcher = pattern.matcher(string);
+            matcher.find();
+            return matcher.group(1);
         }
     }
 }
