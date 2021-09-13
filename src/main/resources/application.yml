@@ -26,6 +26,8 @@ spring:
         binder:
           minPartitionCount: 1
           consumerProperties:
+            topic.prefix: (.*)[-_][0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
+            topic.prefixIsPattern: true
             topic.suffix: -responses
             isolation.level: read_committed
             max.poll.records: 5
@@ -87,6 +89,6 @@ zeebe.client:
     correlationKey: eventId
     jobType: ticketProcessing
   job:
-    timeout: 5
+    timeout: 5m
 job-storage:
   jobRemovalEnabled: false

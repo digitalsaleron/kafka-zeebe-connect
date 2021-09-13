@@ -3,5 +3,5 @@
 /.settings/
 /kafka-zeebe-connect/.settings/
 /kafka-zeebe-connect/target/
-/kafka-zeebe-connect/logs/
+/kafka-zeebe-connect/logs/*
 /target/
