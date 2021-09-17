@@ -1,0 +1,41 @@
+<assembly
+        xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+
+    <!-- Leave this as build-directory, shouldn't change this -->
+    <id>build-directory</id>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <formats>
+        <format>dir</format>
+    </formats>
+    <files>
+        <file>
+            <source>${project.build.directory}/maven-archiver/pom.properties</source>
+            <outputDirectory>/</outputDirectory>
+        </file>
+    </files>
+
+    <fileSets>
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>${build.finalName}.jar</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <!-- This is simple way, leave the things you need to have it outside JAR file inside folder /src/main/resources/config -->
+            <!-- Put the execution files *.run, *.bat inside /src/main/resources -->
+            <!-- Shouldn't customize much here -->
+            <directory>${project.basedir}/src/main/resources</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>*.sh</include>
+                <include>*.bat</include>
+                <include>/config/**/*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>

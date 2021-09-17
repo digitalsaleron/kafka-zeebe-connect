@@ -1,2 +1,0 @@
-bootstrap.server: 10.10.15.220:9092
-tenant.prefix: rd.mt

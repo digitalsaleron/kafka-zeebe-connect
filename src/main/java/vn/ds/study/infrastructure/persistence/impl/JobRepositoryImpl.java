@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import javax.annotation.PostConstruct;
 
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.ListTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -219,13 +220,15 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
         properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
 
         final Map<String, BinderProperties> binderProperties = this.bindingServiceProperties.getBinders();
-        final Map<String, Object> binderAddresses = new HashMap<>();
+        final Properties binderAddresses = new Properties();
         binderProperties.forEach((key, value) -> {
             this.flatten(null, value.getEnvironment(), binderAddresses);
         });
-        binderAddresses.forEach((key, value) -> {
-            properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, value);
-        });
+        
+        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
+            binderAddresses.getOrDefault("spring.cloud.stream.kafka.binder.brokers", "localhost:9092"));
+        properties.put(AdminClientConfig.SECURITY_PROTOCOL_CONFIG, binderAddresses.getOrDefault(
+            "spring.cloud.stream.kafka.binder.configuration.security.protocol", "PLAINTEXT"));
 
         if (bindingProperties != null && bindingProperties.getGroup() != null) {
             properties.put(ConsumerConfig.GROUP_ID_CONFIG, bindingProperties.getGroup());
@@ -248,7 +251,7 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
     }
 
     @SuppressWarnings("unchecked")
-    private void flatten(String propertyName, Object value, Map<String, Object> binderProperties) {
+    private void flatten(String propertyName, Object value, Properties binderProperties) {
         if (value instanceof Map) {
             ((Map<Object, Object>) value).forEach(
                 (k, v) -> flatten((propertyName != null ? propertyName + "." : "") + k, v, binderProperties));
