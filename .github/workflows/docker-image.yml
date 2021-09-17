@@ -7,8 +7,6 @@ name: Docker Image
 
 on:
   push:
-    branches: [ main ]
-    # Publish semver tags as releases.
     tags: [ '*.*.*' ]
 
 env:
