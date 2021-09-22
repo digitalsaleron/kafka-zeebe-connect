@@ -1,4 +1,3 @@
-sleep.time.second: 1
 spring:
   boot.admin.client:
     enabled: false
@@ -19,21 +18,19 @@ spring:
                 stream:
                   kafka:
                     binder:
-                      brokers: 192.168.56.4:9092
-                      configuration.security.protocol: SSL
+                      brokers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+                      configuration.security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
       bindings:
         applicationMetrics.destination: process-metrics
       kafka:
         binder:
-          replicationFactor: 2
-          minPartitionCount: 1
           consumerProperties:
             topic.prefix: (.*)[-_][0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$
             topic.prefixIsPattern: true
             topic.suffix: -responses
             isolation.level: read_committed
             max.poll.records: 5
-            max.poll.interval.ms: 300000
+            max.poll.interval.ms: 120000
           producerProperties:
             topic.suffix: -requests
           transaction:
@@ -47,15 +44,13 @@ spring:
 logging:
   file:
     name: ./logs/${spring.application.name}.log
-    max-file-size: 10MB
-    max-history: 2
-    total-size-cap: 30MB
-    clean-history-on-start: true
+    max-file-size: 5MB
+    clean-history-on-start: false
   pattern:
     rolling-file-name: ./logs/${spring.application.name}-%d{yyyy-MM-dd}.%i.log
   level:
     org.apache.kafka.clients: info
-    io.camunda.zeebe.client: trace
+    io.camunda.zeebe.client: info
 management:
   metrics:
     export:
@@ -78,8 +73,8 @@ management:
     health.show-details: always
 zeebe.client:
   requestTimeout: 10000
-  broker.gatewayAddress: 192.168.56.4:26500
-  security.plaintext: true
+  broker.gatewayAddress: ${ZEEBE_BROKER_GATEWAY:localhost:26500}
+  security.plaintext: ${ZEEBE_BROKER_GATEWAY_SECURITY_ENABLED:true}
   worker:
     maxJobsActive: 1
     threads: 1

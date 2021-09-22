@@ -3,3 +3,5 @@
 /.classpath
 /.project
 /target/
+/src/main/resources/config/application-local.yml
+/src/main/resources/config/application-aws.yml
