@@ -12,13 +12,16 @@
  */
 package vn.ds.study.infrastructure.configuration;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -31,9 +34,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
+import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
@@ -143,6 +148,11 @@ public class PollerConfiguration {
             String jobKeyAsString = String.valueOf(job.getKey());
             variablesAsMap.put("eventId", jobKeyAsString);
             
+            job.getCustomHeaders().forEach((key, value) -> {
+                variablesAsMap.put(key, detectDataType(value));
+                LOGGER.debug("Add value {} to path {} ", value, key);
+            });
+            
             final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
             final String topicPrefix = detectTopicPrefix(job.getElementId());
             
@@ -171,8 +181,18 @@ public class PollerConfiguration {
                     LOGGER.debug("Error while building the consumer. So remove the consumer {}", topicPrefix);
                 }
             }
-            streamBridge.send(topicName, variablesAsMap);
+            final JsonNode jsonNode = convertProperties2JsonNode(variablesAsMap);
+            
+            streamBridge.send(topicName, jsonNode);
             LOGGER.info("Send the message {} - step {} to Kafka", correlationKey, job.getElementId());
+        }
+
+        private JsonNode convertProperties2JsonNode(final Map<String, Object> variablesAsMap) throws IOException {
+            final Properties properties = new Properties();
+            properties.putAll(variablesAsMap);
+
+            final JavaPropsMapper javaPropsMapper = JavaPropsMapper.builder().build();
+            return javaPropsMapper.readPropertiesAs(properties, JsonNode.class);
         }
         
         private String detectTopicPrefix(String jobElementId) {
@@ -187,6 +207,23 @@ public class PollerConfiguration {
             } else {
                 return jobElementId;
             }
+        }
+
+        private Object detectDataType(String value) {
+            if (!StringUtils.hasText(value)) {
+                LOGGER.debug("The value is {}", value);
+                return "";
+            }
+            if (value.matches("true") || value.matches("false")) {
+                LOGGER.debug("Data type is {} and value is {}", Boolean.class, value);
+                return Boolean.parseBoolean(value);
+            }
+            if(NumberUtils.isParsable(value)) {
+                LOGGER.debug("Data type is {} and value is {}", Number.class, value);
+                return NumberUtils.createNumber(value);
+            }
+            LOGGER.debug("Data type is {} and value is {}", String.class, value);
+            return value.replace("\"", "");
         }
     }
 }

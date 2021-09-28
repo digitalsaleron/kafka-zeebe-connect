@@ -150,11 +150,12 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
             }
             LOGGER.info("Completed job storage initialization. Loaded {} job instances from Kafka",
                 this.jobIntances.size());
-
             this.eventPublisher.publishEvent(new ConsumerRecoveryEvent(this, Collections.unmodifiableMap(jobIntances)));
         } catch (IOException e) {
             LOGGER.error("Error while loading messages from Kafka. Detail: ", e);
-            throw e;
+            if(!this.jobStorageProperties.isExceptionIgnoreEnabled()) {
+                throw e;
+            }
         }
         kafkaConsumer.close();
     }

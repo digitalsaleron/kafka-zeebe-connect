@@ -74,7 +74,7 @@ management:
 zeebe.client:
   requestTimeout: 10000
   broker.gatewayAddress: ${ZEEBE_BROKER_GATEWAY:localhost:26500}
-  security.plaintext: ${ZEEBE_BROKER_GATEWAY_SECURITY_ENABLED:true}
+  security.plaintext: ${ZEEBE_BROKER_SECURITY_PLAINTEXT_ENABLED:true}
   worker:
     maxJobsActive: 1
     threads: 1
@@ -84,4 +84,5 @@ zeebe.client:
   job:
     timeout: 5m
 job-storage:
-  jobRemovalEnabled: false  
+  jobRemovalEnabled: false
+  exceptionIgnoreEnabled: false
