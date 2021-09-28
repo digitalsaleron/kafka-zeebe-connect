@@ -18,6 +18,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class JobStorageProperties {
     
     private boolean jobRemovalEnabled;
+    
+    private boolean exceptionIgnoreEnabled;
 
     public boolean isJobRemovalEnabled() {
         return jobRemovalEnabled;
@@ -25,6 +27,14 @@ public class JobStorageProperties {
 
     public void setJobRemovalEnabled(boolean jobRemovalEnable) {
         this.jobRemovalEnabled = jobRemovalEnable;
+    }
+
+    public boolean isExceptionIgnoreEnabled() {
+        return exceptionIgnoreEnabled;
+    }
+
+    public void setExceptionIgnoreEnabled(boolean exceptionIgnoreEnabled) {
+        this.exceptionIgnoreEnabled = exceptionIgnoreEnabled;
     }
     
 }

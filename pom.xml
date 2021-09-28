@@ -5,11 +5,12 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>vn.ds.study</groupId>
 	<artifactId>kafka-zeebe-connect</artifactId>
-	<version>0.0.9</version>
+	<version>0.0.10</version>
 	<packaging>jar</packaging>
 	<name>kafka-zeebe-connect</name>
 	<description>Transactional processor that reads from topic, put into db
-		and write to another topic transactionally</description>
+		and write to another topic transactionally
+	</description>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -22,7 +23,8 @@
 		<java.version>1.8</java.version>
 		<spring-boot-admin.version>2.3.1</spring-boot-admin.version>
 		<spring-zeebe-starter.version>1.1.0</spring-zeebe-starter.version>
-		<logstash-logback-encoder.version>4.11</logstash-logback-encoder.version>
+		<logstash-logback-encoder.version>4.11
+		</logstash-logback-encoder.version>
 	</properties>
 
 	<dependencyManagement>
@@ -93,13 +95,21 @@
 			<artifactId>logstash-logback-encoder</artifactId>
 			<version>${logstash-logback-encoder.version}</version>
 		</dependency>
- 		<dependency>
+		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-config</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.cloud</groupId>
 			<artifactId>spring-cloud-starter-bootstrap</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.dataformat</groupId>
+			<artifactId>jackson-dataformat-properties</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
 		</dependency>
 	</dependencies>
 
@@ -123,7 +133,8 @@
 				<configuration>
 					<appendAssemblyId>false</appendAssemblyId>
 					<descriptors>
-						<desdescriptor>${project.basedir}/src/assembly/assembly.xml</desdescriptor>
+						<desdescriptor>${project.basedir}/src/assembly/assembly.xml
+						</desdescriptor>
 					</descriptors>
 				</configuration>
 				<executions>
