@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHandler;
+import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -43,14 +44,17 @@ public class ConsumerMessageHandler implements MessageHandler {
     private ZeebeClient client;
 
     private String correlationKey;
+    
+    private String responseWrapperKey;
 
     public ConsumerMessageHandler(JobRepository jobRepository, ObjectMapper objectMapper, ZeebeClient client,
-            String correlationKey) {
+            String correlationKey, String responseWrapperKey) {
         super();
         this.jobRepository = jobRepository;
         this.objectMapper = objectMapper;
         this.client = client;
         this.correlationKey = correlationKey;
+        this.responseWrapperKey = responseWrapperKey;
     }
 
     @Override
@@ -59,8 +63,8 @@ public class ConsumerMessageHandler implements MessageHandler {
         String key = null;
         try {
             final JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
-            final ObjectNode objectNode = (ObjectNode) jsonNode;
-            key = objectNode.get(correlationKey).asText();
+            final ObjectNode objectNode = this.wrapResponseIfNecessary(jsonNode);
+            key = getKey(objectNode);
 
             final JobInfo jobInfo = jobRepository.getJob(key);
             this.validateJobInfo(jobInfo, key);
@@ -70,11 +74,36 @@ public class ConsumerMessageHandler implements MessageHandler {
                 new TypeReference<Map<String, Object>>() {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
+            LOGGER.debug("Send the message to Workflow {}", objectNode.toPrettyString());
             LOGGER.info("Consume and send the message {} - step {} to the workflow engine", key,
                 jobInfo.getActivatedJob().getElementId());
         } catch (Exception e) {
             LOGGER.error("Error while responding the message with key {}. Detail: ", key, e);
         }
+    }
+
+    private String getKey(final ObjectNode objectNode) {
+        String key;
+        if(StringUtils.hasText(responseWrapperKey)) {
+            key = objectNode.with(responseWrapperKey).get(correlationKey).asText();
+        }
+        else {
+            key = objectNode.get(correlationKey).asText();
+        }
+        return key;
+    }
+
+    private ObjectNode wrapResponseIfNecessary(final JsonNode jsonNode) {
+        final ObjectNode objectNode;
+        if(StringUtils.hasText(responseWrapperKey)) {
+            final ObjectMapper mapper = new ObjectMapper();
+            final ObjectNode root = mapper.createObjectNode();
+            objectNode = root.set(responseWrapperKey, jsonNode);
+        }
+        else {
+            objectNode = (ObjectNode) jsonNode;
+        }
+        return objectNode;
     }
 
     private void validateJobInfo(JobInfo jobInfo, String key) throws JobInstanceNotFoundException {

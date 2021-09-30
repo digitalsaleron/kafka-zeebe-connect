@@ -15,7 +15,6 @@ package vn.ds.study.infrastructure.configuration;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
-import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,7 +37,6 @@ import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.javaprop.JavaPropsMapper;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
@@ -48,17 +46,21 @@ import io.camunda.zeebe.client.api.worker.JobWorker;
 import io.camunda.zeebe.client.api.worker.JobWorkerBuilderStep1.JobWorkerBuilderStep3;
 import io.camunda.zeebe.client.impl.ZeebeClientBuilderImpl;
 import io.camunda.zeebe.client.impl.command.ArgumentUtil;
+import pl.jalokim.propertiestojson.util.PropertiesToJsonConverter;
 import vn.ds.study.application.builder.KafkaConsumerBuilder;
 import vn.ds.study.application.builder.KafkaConsumerManager;
 import vn.ds.study.application.handler.ConsumerMessageHandler;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.infrastructure.properties.PollerProperties;
+import vn.ds.study.infrastructure.properties.Wrapper;
 import vn.ds.study.model.JobInfo;
 
 @DependsOn(value = {"jobRepository"})
 @Configuration
-@EnableConfigurationProperties(value = { PollerProperties.class, KafkaBinderConfigurationProperties.class, KafkaExtendedBindingProperties.class})
+@EnableConfigurationProperties(
+        value = { PollerProperties.class, KafkaBinderConfigurationProperties.class,
+            KafkaExtendedBindingProperties.class, Wrapper.class })
 public class PollerConfiguration {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(PollerConfiguration.class);
@@ -84,12 +86,14 @@ public class PollerConfiguration {
     private KafkaTopicProperties consumerTopicProperties;
     
     private KafkaTopicProperties producerTopicProperties;
-
+    
+    private Wrapper wrapper;
+    
     public PollerConfiguration(PollerProperties pollerProperties, JobRepository jobRepository,
             KafkaConsumerManager kafkaConsumerManager, ZeebeClientBuilderImpl zeebeClientBuilder,
             ZeebeClient zeebeClient, StreamBridge streamBridge, ObjectMapper objectMapper,
             AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, BindingService bindingService,
-            KafkaTopicProperties consumerTopicProperties, KafkaTopicProperties producerTopicProperties) {
+            KafkaTopicProperties consumerTopicProperties, KafkaTopicProperties producerTopicProperties, Wrapper wrapper) {
         super();
         this.pollerProperties = pollerProperties;
         this.jobRepository = jobRepository;
@@ -102,6 +106,7 @@ public class PollerConfiguration {
         this.consumerTopicProperties = consumerTopicProperties;
         this.producerTopicProperties = producerTopicProperties;
         this.zeebeClient = zeebeClient;
+        this.wrapper = wrapper;
     }
 
     @PostConstruct
@@ -146,8 +151,8 @@ public class PollerConfiguration {
         public void handle(final JobClient client, final ActivatedJob job) throws Exception {
             final Map<String, Object> variablesAsMap = job.getVariablesAsMap();
             String jobKeyAsString = String.valueOf(job.getKey());
-            variablesAsMap.put("eventId", jobKeyAsString);
-            
+            variablesAsMap.putIfAbsent("eventId", jobKeyAsString);
+
             job.getCustomHeaders().forEach((key, value) -> {
                 variablesAsMap.put(key, detectDataType(value));
                 LOGGER.debug("Add value {} to path {} ", value, key);
@@ -170,7 +175,7 @@ public class PollerConfiguration {
             if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
-                        zeebeClient, pollerProperties.getCorrelationKey());
+                        zeebeClient, pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
                     KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                         topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
                     LOGGER.info("Created consumer {} to consume topic {}", consumerName, topicName);
@@ -183,16 +188,14 @@ public class PollerConfiguration {
             }
             final JsonNode jsonNode = convertProperties2JsonNode(variablesAsMap);
             
+            LOGGER.debug("Send the message to Kafka {}", jsonNode.toPrettyString());
             streamBridge.send(topicName, jsonNode);
             LOGGER.info("Send the message {} - step {} to Kafka", correlationKey, job.getElementId());
         }
 
-        private JsonNode convertProperties2JsonNode(final Map<String, Object> variablesAsMap) throws IOException {
-            final Properties properties = new Properties();
-            properties.putAll(variablesAsMap);
-
-            final JavaPropsMapper javaPropsMapper = JavaPropsMapper.builder().build();
-            return javaPropsMapper.readPropertiesAs(properties, JsonNode.class);
+        private JsonNode convertProperties2JsonNode(Map<String, Object> variablesAsMap) throws IOException {
+            final String jsonAsString = new PropertiesToJsonConverter().convertFromValuesAsObjectMap(variablesAsMap);
+            return objectMapper.readTree(jsonAsString);
         }
         
         private String detectTopicPrefix(String jobElementId) {
