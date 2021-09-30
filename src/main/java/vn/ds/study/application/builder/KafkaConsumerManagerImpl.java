@@ -34,6 +34,7 @@ import vn.ds.study.application.handler.ConsumerMessageHandler;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.infrastructure.properties.PollerProperties;
+import vn.ds.study.infrastructure.properties.Wrapper;
 import vn.ds.study.model.JobInfo;
 import vn.ds.study.model.event.ConsumerRecoveryEvent;
 
@@ -61,6 +62,9 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
     
     @Autowired
     private BindingService bindingService;
+    
+    @Autowired
+    private Wrapper wrapper;
     
     @Autowired
     private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
@@ -92,7 +96,7 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
             if (!findAndAddConsumerIfAbsent(consumerName)) {
                 try {
                     final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
-                        zeebeClient, pollerProperties.getCorrelationKey());
+                        zeebeClient, pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
                     KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                         topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
                     LOGGER.debug("Created consumer {} to consume topic {}", consumerName, topicName);
