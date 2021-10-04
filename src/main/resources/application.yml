@@ -8,6 +8,7 @@ spring:
   application.name: zeebe-kafka-connect
   jmx.enabled: true
   cloud:
+    function.definition: deplopmentNotification
     stream:
       binders:
         kafka1:
@@ -22,7 +23,17 @@ spring:
                       configuration.security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
       bindings:
         applicationMetrics.destination: process-metrics
+        
+        deplopmentNotification-in-0:
+          binder: kafka1
+          destination: deployment-notification
+          group: deplopmentNotification
       kafka:
+        bindings:
+          deplopmentNotification-in-0:
+            consumer:
+              startOffset: earliest
+              resetOffsets: true
         binder:
           consumerProperties:
             topic.prefix: (.*)[-_][0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}$

@@ -305,4 +305,9 @@ public class JobRepositoryImpl implements JobRepository, JobRepositoryJmxMBean {
             Thread.currentThread().interrupt();
         }
     }
+
+    @Override
+    public boolean containsKey(String key) {
+        return this.jobIntances.containsKey(key);
+    }
 }

@@ -38,4 +38,5 @@ public class KafkaTopicConfiguration {
     KafkaTopicProperties getJobStorageTopicProperties() {
         return new KafkaTopicProperties();
     }
+    
 }

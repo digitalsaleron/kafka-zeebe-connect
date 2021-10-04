@@ -49,7 +49,7 @@ import io.camunda.zeebe.client.impl.command.ArgumentUtil;
 import pl.jalokim.propertiestojson.util.PropertiesToJsonConverter;
 import vn.ds.study.application.builder.KafkaConsumerBuilder;
 import vn.ds.study.application.builder.KafkaConsumerManager;
-import vn.ds.study.application.handler.ConsumerMessageHandler;
+import vn.ds.study.application.handler.ResponseMessageHandler;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.infrastructure.properties.PollerProperties;
@@ -174,7 +174,7 @@ public class PollerConfiguration {
 
             if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
                 try {
-                    final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
+                    final MessageHandler messageHandler = new ResponseMessageHandler(jobRepository, objectMapper,
                         zeebeClient, pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
                     KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                         topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
