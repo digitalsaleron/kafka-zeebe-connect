@@ -13,6 +13,7 @@
 package vn.ds.study.application.handler;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -33,9 +34,9 @@ import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.model.ActivatedJob;
 import vn.ds.study.model.JobInfo;
 
-public class ConsumerMessageHandler implements MessageHandler {
+public class ResponseMessageHandler implements MessageHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerMessageHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ResponseMessageHandler.class);
 
     private JobRepository jobRepository;
 
@@ -47,7 +48,7 @@ public class ConsumerMessageHandler implements MessageHandler {
     
     private String responseWrapperKey;
 
-    public ConsumerMessageHandler(JobRepository jobRepository, ObjectMapper objectMapper, ZeebeClient client,
+    public ResponseMessageHandler(JobRepository jobRepository, ObjectMapper objectMapper, ZeebeClient client,
             String correlationKey, String responseWrapperKey) {
         super();
         this.jobRepository = jobRepository;
@@ -75,9 +76,10 @@ public class ConsumerMessageHandler implements MessageHandler {
                 });
             client.newCompleteCommand(job.getKey()).variables(variables).send();
             LOGGER.debug("Send the message to Workflow {}", objectNode.toPrettyString());
-            LOGGER.info("Consume and send the message {} - step {} to the workflow engine", key,
+            LOGGER.info("Receive and send the message {} - step {} to the workflow engine", key,
                 jobInfo.getActivatedJob().getElementId());
-        } catch (Exception e) {
+        } 
+        catch (IOException | JobInstanceNotFoundException e) {
             LOGGER.error("Error while responding the message with key {}. Detail: ", key, e);
         }
     }

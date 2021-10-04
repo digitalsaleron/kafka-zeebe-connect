@@ -23,5 +23,8 @@ public interface JobRepositoryJmxMBean {
     
     @ManagedOperation(description = "Re-load the job storage")
     void reload();
+    
+    @ManagedOperation(description = "Check the instance in the job storage")
+    boolean containsKey(String key);
 
 }

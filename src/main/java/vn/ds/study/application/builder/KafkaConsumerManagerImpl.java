@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.camunda.zeebe.client.ZeebeClient;
-import vn.ds.study.application.handler.ConsumerMessageHandler;
+import vn.ds.study.application.handler.ResponseMessageHandler;
 import vn.ds.study.infrastructure.persistence.JobRepository;
 import vn.ds.study.infrastructure.properties.KafkaTopicProperties;
 import vn.ds.study.infrastructure.properties.PollerProperties;
@@ -39,36 +39,36 @@ import vn.ds.study.model.JobInfo;
 import vn.ds.study.model.event.ConsumerRecoveryEvent;
 
 @Component("kafkaConsumerManager")
-public class KafkaConsumerManagerImpl implements KafkaConsumerManager , ApplicationListener<ConsumerRecoveryEvent>{
+public class KafkaConsumerManagerImpl implements KafkaConsumerManager, ApplicationListener<ConsumerRecoveryEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConsumerManagerImpl.class);
-    
+
     private final Map<String, String> kafkaConsumers = new ConcurrentHashMap<>();
-    
+
     @Autowired
     private KafkaTopicProperties consumerTopicProperties;
-    
+
     @Autowired
     private KafkaTopicProperties producerTopicProperties;
-    
+
     @Autowired
     private ObjectMapper objectMapper;
-    
+
     @Autowired
     private ZeebeClient zeebeClient;
 
     @Autowired
     private PollerProperties pollerProperties;
-    
+
     @Autowired
     private BindingService bindingService;
-    
+
     @Autowired
     private Wrapper wrapper;
-    
+
     @Autowired
     private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
-        
+
     @Override
     public boolean findAndAddConsumerIfAbsent(String consumerName) {
         final String previousValue = this.kafkaConsumers.putIfAbsent(consumerName, consumerName);
@@ -77,7 +77,9 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
 
     @Override
     public String removeConsumer(String consumerName) {
-        return this.kafkaConsumers.remove(consumerName);
+        final String consumer = this.kafkaConsumers.remove(consumerName);
+        this.bindingService.unbindConsumers(consumerName);
+        return consumer;
     }
 
     @Override
@@ -95,7 +97,7 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
             final String consumerName = topicPrefix;
             if (!findAndAddConsumerIfAbsent(consumerName)) {
                 try {
-                    final MessageHandler messageHandler = new ConsumerMessageHandler(jobRepository, objectMapper,
+                    final MessageHandler messageHandler = new ResponseMessageHandler(jobRepository, objectMapper,
                         zeebeClient, pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
                     KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                         topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
@@ -103,14 +105,13 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager , Applicat
                 } catch (Exception e) {
                     LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
                     this.removeConsumer(consumerName);
-                    bindingService.unbindConsumers(consumerName);
                     LOGGER.debug("Error while building the consumer. So remove the consumer {}", topicPrefix);
                 }
             }
         });
         LOGGER.info("Completed recovery of consumers {}", kafkaConsumers.values());
     }
-    
+
     private String detectTopicPrefix(String jobElementId) {
         if (consumerTopicProperties.isPrefixIsPattern()) {
             final String regex = consumerTopicProperties.getPrefix();
