@@ -52,6 +52,7 @@ spring:
                 retries: 1
                 acks: all
                 enable.idempotence: true
+                max.block.ms: 60000
 logging:
   file:
     name: ./logs/${spring.application.name}.log

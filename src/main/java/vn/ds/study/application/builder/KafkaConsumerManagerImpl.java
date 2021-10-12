@@ -39,11 +39,11 @@ import vn.ds.study.model.JobInfo;
 import vn.ds.study.model.event.ConsumerRecoveryEvent;
 
 @Component("kafkaConsumerManager")
-public class KafkaConsumerManagerImpl implements KafkaConsumerManager, ApplicationListener<ConsumerRecoveryEvent> {
+public class KafkaConsumerManagerImpl implements KafkaConsumerManagerJmx, KafkaConsumerManager, ApplicationListener<ConsumerRecoveryEvent> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConsumerManagerImpl.class);
 
-    private final Map<String, String> kafkaConsumers = new ConcurrentHashMap<>();
+    private final Map<String, MessageHandler> kafkaConsumers = new ConcurrentHashMap<>();
 
     @Autowired
     private KafkaTopicProperties consumerTopicProperties;
@@ -68,18 +68,36 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager, Applicati
 
     @Autowired
     private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
+    
+    @Autowired
+    private JobRepository jobRepository;
 
     @Override
-    public boolean findAndAddConsumerIfAbsent(String consumerName) {
-        final String previousValue = this.kafkaConsumers.putIfAbsent(consumerName, consumerName);
-        return previousValue != null;
+    public boolean findAndAddConsumerIfAbsent(final String consumerName, final MessageHandler handler) {
+        
+        synchronized (consumerName.intern()) {
+            MessageHandler previousHandler = this.kafkaConsumers.putIfAbsent(consumerName, handler);
+            if (previousHandler != null && !previousHandler.equals(handler)) {
+
+                this.removeConsumer(consumerName);
+                this.kafkaConsumers.put(consumerName, handler);
+                LOGGER.debug(
+                    "Detect the change of the consumer configuration {}. So remove the consumer {} to re-initialize",
+                    consumerName, consumerName);
+                return false;
+            } else {
+                LOGGER.debug("Existing consumer {} found in cache", consumerName);
+                return previousHandler != null;
+            }
+        }
     }
 
     @Override
-    public String removeConsumer(String consumerName) {
-        final String consumer = this.kafkaConsumers.remove(consumerName);
-        this.bindingService.unbindConsumers(consumerName);
-        return consumer;
+    public String removeConsumer(final String consumerName) {
+        final String bindingName = new StringBuilder().append(consumerName).append("-in-0").toString();
+        this.kafkaConsumers.remove(consumerName);
+        this.bindingService.unbindConsumers(bindingName);
+        return consumerName;
     }
 
     @Override
@@ -95,10 +113,10 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager, Applicati
             final String topicPrefix = this.detectTopicPrefix(jobElementId);
             final String topicName = new StringBuilder().append(topicPrefix).append(producerTopicSuffix).toString();
             final String consumerName = topicPrefix;
-            if (!findAndAddConsumerIfAbsent(consumerName)) {
+            final MessageHandler messageHandler = new ResponseMessageHandler(jobRepository, objectMapper, zeebeClient,
+                pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
+            if (!findAndAddConsumerIfAbsent(consumerName, messageHandler)) {
                 try {
-                    final MessageHandler messageHandler = new ResponseMessageHandler(jobRepository, objectMapper,
-                        zeebeClient, pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
                     KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                         topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
                     LOGGER.debug("Created consumer {} to consume topic {}", consumerName, topicName);
@@ -123,6 +141,30 @@ public class KafkaConsumerManagerImpl implements KafkaConsumerManager, Applicati
             return matcher.group(1);
         } else {
             return jobElementId;
+        }
+    }
+
+    @Override
+    public void reInitializeResponseConsumer(final String consumerName) {
+
+        final String topicPrefix = consumerName;
+        final String topicSuffix = this.consumerTopicProperties.getSuffix();
+        final String topicName = new StringBuilder().append(topicPrefix).append(topicSuffix).toString();
+
+        this.removeConsumer(consumerName);
+
+        final MessageHandler messageHandler = new ResponseMessageHandler(jobRepository, objectMapper, zeebeClient,
+            pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
+        if (!findAndAddConsumerIfAbsent(consumerName, messageHandler)) {
+            try {
+                KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler, topicPrefix).setTopicSuffix(
+                    topicSuffix).build();
+                LOGGER.info("Re-initialize consumer {} to consume topic {} via JMX", consumerName, topicName);
+            } catch (Exception e) {
+                LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
+                this.removeConsumer(consumerName);
+                LOGGER.debug("Error while building the consumer. So remove the consumer {}", topicPrefix);
+            }
         }
     }
 }

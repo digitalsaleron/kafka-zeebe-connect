@@ -33,5 +33,4 @@ public class IntermediateEvent {
     public void setCorrelationKey(String correlationKey) {
         this.correlationKey = correlationKey;
     }
-    
 }
