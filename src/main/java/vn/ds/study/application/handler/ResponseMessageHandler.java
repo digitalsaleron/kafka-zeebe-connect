@@ -16,6 +16,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
@@ -112,5 +114,19 @@ public class ResponseMessageHandler implements MessageHandler {
         if (jobInfo == null) {
             throw new JobInstanceNotFoundException(String.format("The job instance %s could not be found", key));
         }
+    }
+    
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder().append(this.correlationKey).toHashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof ResponseMessageHandler)) {
+            return false;
+        }
+        ResponseMessageHandler that = (ResponseMessageHandler) obj;
+        return new EqualsBuilder().append(this.correlationKey, that.correlationKey).isEquals();
     }
 }

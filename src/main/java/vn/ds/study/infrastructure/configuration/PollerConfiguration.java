@@ -18,11 +18,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.PostConstruct;
-
 import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.stream.binder.kafka.properties.KafkaBinderConfigurationProperties;
 import org.springframework.cloud.stream.binder.kafka.properties.KafkaExtendedBindingProperties;
@@ -31,6 +30,7 @@ import org.springframework.cloud.stream.binding.BindingService;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.util.StringUtils;
@@ -108,8 +108,12 @@ public class PollerConfiguration {
         this.zeebeClient = zeebeClient;
         this.wrapper = wrapper;
     }
+    
+    @EventListener(ApplicationReadyEvent.class)
+    public void doSomethingAfterStartup() {
+        this.initializePoller();
+    }
 
-    @PostConstruct
     private void initializePoller() {
         ArgumentUtil.ensureNotNullNorEmpty("jobType", pollerProperties.getJobType());
         ArgumentUtil.ensureNotNullNorEmpty("correlationKey", pollerProperties.getCorrelationKey());
@@ -172,17 +176,16 @@ public class PollerConfiguration {
 
             jobRepository.addJob(JobInfo.from(correlationKey, job.getProcessInstanceKey(), job.getKey(), activatedJob));
 
-            if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
+            final MessageHandler messageHandler = new ResponseMessageHandler(jobRepository, objectMapper, zeebeClient,
+                pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
+            if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName, messageHandler)) {
                 try {
-                    final MessageHandler messageHandler = new ResponseMessageHandler(jobRepository, objectMapper,
-                        zeebeClient, pollerProperties.getCorrelationKey(), wrapper.getResponseWrapperKey());
                     KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                         topicPrefix).setTopicSuffix(consumerTopicSuffix).build();
                     LOGGER.info("Created consumer {} to consume topic {}", consumerName, topicName);
                 } catch (Exception e) {
                     LOGGER.error("Error while building the consumer {}. Detail: ", topicPrefix, e);
                     kafkaConsumerManager.removeConsumer(consumerName);
-                    bindingService.unbindConsumers(consumerName);
                     LOGGER.debug("Error while building the consumer. So remove the consumer {}", topicPrefix);
                 }
             }

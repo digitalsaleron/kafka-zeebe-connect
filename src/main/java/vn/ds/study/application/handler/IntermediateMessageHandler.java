@@ -15,6 +15,8 @@ package vn.ds.study.application.handler;
 import java.io.ByteArrayInputStream;
 import java.util.Map;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
@@ -35,18 +37,15 @@ public class IntermediateMessageHandler implements MessageHandler {
 
     private ZeebeClient zeebeClient;
 
-    private String processId;
-
     private String correlationKey;
     
     private String messageName;
 
-    public IntermediateMessageHandler(ObjectMapper objectMapper, ZeebeClient zeebeClient, String processId,
-            String correlationKey, String messageName) {
+    public IntermediateMessageHandler(ObjectMapper objectMapper, ZeebeClient zeebeClient, String correlationKey,
+            String messageName) {
         super();
         this.objectMapper = objectMapper;
         this.zeebeClient = zeebeClient;
-        this.processId = processId;
         this.correlationKey = correlationKey;
         this.messageName = messageName;
     }
@@ -68,7 +67,22 @@ public class IntermediateMessageHandler implements MessageHandler {
             LOGGER.info("Send a intermediate message {} - correlation key {} to workflow", messageName,
                 correlationKeyAsString);
         } catch (Exception e) {
-            LOGGER.error("Error while responding the intermediate message of processId {}. Detail: ", processId, e);
+            LOGGER.error("Error while responding the intermediate message. Detail: ", e);
         }
+    }
+    
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder().append(this.messageName).append(this.correlationKey).toHashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof IntermediateMessageHandler)) {
+            return false;
+        }
+        IntermediateMessageHandler that = (IntermediateMessageHandler) obj;
+        return new EqualsBuilder().append(this.messageName, that.messageName).append(this.correlationKey,
+            that.correlationKey).isEquals();
     }
 }

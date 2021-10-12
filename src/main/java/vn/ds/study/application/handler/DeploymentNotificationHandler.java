@@ -66,34 +66,33 @@ public class DeploymentNotificationHandler implements Consumer<JsonNode>{
 
         this.validateProcessId(notification.getProcessId());
 
+        LOGGER.info("Receive a deployment notification from processId {} - version {}", notification.getProcessId(),
+            notification.getVersion());
+
         final List<MessageStartEvent> messageStartEvents = notification.getMessageStartEvents();
         messageStartEvents.forEach(event -> {
-            this.createStartEventConsumer(event.getMessageName(), notification.getProcessId(),
-                notification.getVersion());
+            this.createStartEventConsumer(event.getMessageName());
         });
         final List<IntermediateEvent> intermediateEvents = notification.getIntermediateEvents();
         intermediateEvents.forEach(event -> {
-            this.createIntermediateConsumer(event.getMessageName(), notification.getProcessId(),
-                event.getCorrelationKey());
+            this.createIntermediateConsumer(event.getMessageName(), event.getCorrelationKey());
         });
-        LOGGER.info("Receive a deployment notification from processId {} - version {}", notification.getProcessId(),
-            notification.getVersion());
     }
 
     private void validateProcessId(String processId) {
         ArgumentUtil.ensureNotNullNorEmpty("processId", processId);
     }
 
-    private void createStartEventConsumer(final String consumerName, final String processId, final Integer version) {
+    private void createStartEventConsumer(final String consumerName) {
         final String topicName = consumerName;
-        if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
+        final String messageName = consumerName;
+        final MessageHandler messageHandler = new StartMessageHandler(zeebeClient, objectMapper, messageName);
+        if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName, messageHandler)) {
             try {
-                final MessageHandler messageHandler = new StartMessageHandler(zeebeClient, objectMapper, processId, version);
-
                 KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
                     topicName).setTopicSuffix("").build();
 
-                LOGGER.info("Created start event consumer {} to consume topic {}", consumerName, topicName);
+                LOGGER.info("Created or updated start event consumer {} to consume topic {}", consumerName, topicName);
             } catch (Exception e) {
                 LOGGER.error("Error while building the start event consumer {}. Detail: ", topicName, e);
                 kafkaConsumerManager.removeConsumer(consumerName);
@@ -103,19 +102,18 @@ public class DeploymentNotificationHandler implements Consumer<JsonNode>{
         }
     }
     
-    private void createIntermediateConsumer(final String consumerName, final String processId, final String correlationKey) {
+    private void createIntermediateConsumer(final String consumerName, final String correlationKey) {
         
         final String topicName = consumerName;
         final String messageName = consumerName;
-        if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName)) {
+        final MessageHandler messageHandler = new IntermediateMessageHandler(objectMapper, zeebeClient,
+            correlationKey, messageName);
+        if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName, messageHandler)) {
             try {
-                final MessageHandler messageHandler = new IntermediateMessageHandler(objectMapper, zeebeClient,
-                    processId, correlationKey, messageName);
-
                 KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler, topicName).setTopicSuffix(
                     "").build();
 
-                LOGGER.info("Created intermediate event consumer {} to consume topic {}", consumerName, topicName);
+                LOGGER.info("Created or updated intermediate event consumer {} to consume topic {}", consumerName, topicName);
             } catch (Exception e) {
                 LOGGER.error("Error while building the intermediate event consumer {}. Detail: ", topicName, e);
                 kafkaConsumerManager.removeConsumer(consumerName);

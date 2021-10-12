@@ -12,10 +12,12 @@
  */
 package vn.ds.study.application.builder;
 
+import org.springframework.messaging.MessageHandler;
+
 public interface KafkaConsumerManager {
 
-    boolean findAndAddConsumerIfAbsent(String consumerName);
+    boolean findAndAddConsumerIfAbsent(String consumerName, MessageHandler messageHandler);
 
     String removeConsumer(String consumerName);
-    
+
 }
