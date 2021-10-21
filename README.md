@@ -57,8 +57,23 @@ zeebe.client:
 
 | Variable Name | Default Value | Description |
 |---------------|---------------|-------------|
-| KAFKA_SECURITY_PROTOCOL | PLAINTEXT | Allowed value `SSL` or `PLAINTEXT`, which indicate the protocol for the connection with Kafka |
+| KAFKA_SECURITY_PROTOCOL | PLAINTEXT | Allowed value `SSL` or `PLAINTEXT`, which indicate the pdocument
+rotocol for the connection with Kafka |
 | KAFKA_BOOTSTRAP_SERVERS | localhost:9092 | The external endpoint to access to Kafka server, this could be an array of one or more kafka servers separated by a comma
 | ZEEBE_BROKER_GATEWAY | localhost:26500 | The endpoint of the Zeebe server gateway |
 | ZEEBE_BROKER_SECURITY_PLAINTEXT_ENABLED | false | Accept value of `true` or `false` to indicate the SSL status of the gateway
 
+### Supported Features
+---
+
+#### Custom header mapping
+
+* Job headers will be configured as key-value pair. The key has format **{prefix}.{propertyName}**
+* The prefix (part before the 1st dot) will be container object for the properties
+* The value’s data type will be one of: `text`, `number` or `boolean`
+* `object` and `array` hasn’t been supported yet.
+* `boolean` or `number` as text could be decribed with double quotes ""
+
+Example:
+
+![](images/job-headers.png)  **====>** ![](images/json-job-headers.png)
