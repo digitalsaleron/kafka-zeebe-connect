@@ -26,10 +26,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.camunda.zeebe.client.ZeebeClient;
 
-public class IntermediateMessageHandler implements MessageHandler {
+public class IntermediateMessageHandler extends AbstractMessageHandler implements MessageHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StartMessageHandler.class);
 
@@ -40,10 +41,10 @@ public class IntermediateMessageHandler implements MessageHandler {
     private String correlationKey;
     
     private String messageName;
-
+    
     public IntermediateMessageHandler(ObjectMapper objectMapper, ZeebeClient zeebeClient, String correlationKey,
-            String messageName) {
-        super();
+            String messageName, String responseWrapperKey) {
+        super(responseWrapperKey);
         this.objectMapper = objectMapper;
         this.zeebeClient = zeebeClient;
         this.correlationKey = correlationKey;
@@ -55,10 +56,13 @@ public class IntermediateMessageHandler implements MessageHandler {
         final ObjectReader reader = objectMapper.reader();
         try {
             final JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
-            final Map<String, Object> variables = objectMapper.convertValue(jsonNode,
+            final String correlationKeyAsString = jsonNode.get(correlationKey).asText();
+
+            final ObjectNode objectNode = this.wrapResponseIfNecessary(jsonNode);
+
+            final Map<String, Object> variables = objectMapper.convertValue(objectNode,
                 new TypeReference<Map<String, Object>>() {
-                });
-            final String correlationKeyAsString = (String) variables.get(this.correlationKey);
+            });
 
             this.zeebeClient.newPublishMessageCommand().messageName(messageName).correlationKey(
                 correlationKeyAsString).variables(variables).send();

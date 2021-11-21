@@ -29,6 +29,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.impl.command.ArgumentUtil;
 import vn.sps.cdipp.kafkaconnect.application.builder.KafkaConsumerBuilder;
 import vn.sps.cdipp.kafkaconnect.application.builder.KafkaConsumerManager;
+import vn.sps.cdipp.kafkaconnect.infrastructure.properties.Wrapper;
 import vn.sps.cdipp.kafkaconnect.model.DeploymentNotification;
 import vn.sps.cdipp.kafkaconnect.model.event.IntermediateEvent;
 import vn.sps.cdipp.kafkaconnect.model.event.MessageStartEvent;
@@ -46,16 +47,19 @@ public class DeploymentNotificationHandler implements Consumer<JsonNode>{
     private ZeebeClient zeebeClient;
     
     private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
+    
+    private Wrapper wrapper;
 
     public DeploymentNotificationHandler(ObjectMapper objectMapper, KafkaConsumerManager kafkaConsumerManager,
             BindingService bindingService, ZeebeClient zeebeClient,
-            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory) {
+            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, Wrapper wrapper) {
         super();
         this.objectMapper = objectMapper;
         this.kafkaConsumerManager = kafkaConsumerManager;
         this.bindingService = bindingService;
         this.zeebeClient = zeebeClient;
         this.targetFactory = targetFactory;
+        this.wrapper = wrapper;
     }
 
     @Override
@@ -86,7 +90,9 @@ public class DeploymentNotificationHandler implements Consumer<JsonNode>{
     private void createStartEventConsumer(final String consumerName) {
         final String topicName = consumerName;
         final String messageName = consumerName;
-        final MessageHandler messageHandler = new StartMessageHandler(zeebeClient, objectMapper, messageName);
+        final String responseWrapperKey = this.wrapper.getResponseWrapperKey();
+        final MessageHandler messageHandler = new StartMessageHandler(zeebeClient, objectMapper, messageName,
+            responseWrapperKey);
         if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName, messageHandler)) {
             try {
                 KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler,
@@ -103,11 +109,11 @@ public class DeploymentNotificationHandler implements Consumer<JsonNode>{
     }
     
     private void createIntermediateConsumer(final String consumerName, final String correlationKey) {
-        
         final String topicName = consumerName;
         final String messageName = consumerName;
+        final String responseWrapperKey = this.wrapper.getResponseWrapperKey();
         final MessageHandler messageHandler = new IntermediateMessageHandler(objectMapper, zeebeClient,
-            correlationKey, messageName);
+            correlationKey, messageName, responseWrapperKey);
         if (!kafkaConsumerManager.findAndAddConsumerIfAbsent(consumerName, messageHandler)) {
             try {
                 KafkaConsumerBuilder.prepare(targetFactory, bindingService, messageHandler, topicName).setTopicSuffix(

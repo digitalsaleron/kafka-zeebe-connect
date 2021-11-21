@@ -26,10 +26,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.camunda.zeebe.client.ZeebeClient;
 
-public class StartMessageHandler implements MessageHandler{
+public class StartMessageHandler extends AbstractMessageHandler implements MessageHandler{
     
     private static final Logger LOGGER = LoggerFactory.getLogger(StartMessageHandler.class);
     
@@ -39,8 +40,9 @@ public class StartMessageHandler implements MessageHandler{
     
     private String messageName;
     
-    public StartMessageHandler(ZeebeClient zeebeClient, ObjectMapper objectMapper, String messageName) {
-        super();
+    public StartMessageHandler(ZeebeClient zeebeClient, ObjectMapper objectMapper, String messageName,
+            String responseWrapperKey) {
+        super(responseWrapperKey);
         this.zeebeClient = zeebeClient;
         this.objectMapper = objectMapper;
         this.messageName = messageName;
@@ -51,7 +53,8 @@ public class StartMessageHandler implements MessageHandler{
         final ObjectReader reader = objectMapper.reader();
         try {
             final JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
-            final Map<String, Object> variables = objectMapper.convertValue(jsonNode,
+            final ObjectNode objectNode = this.wrapResponseIfNecessary(jsonNode);
+            final Map<String, Object> variables = objectMapper.convertValue(objectNode,
                 new TypeReference<Map<String, Object>>() {
                 });
             this.zeebeClient.newPublishMessageCommand().messageName(messageName).correlationKey("").variables(
