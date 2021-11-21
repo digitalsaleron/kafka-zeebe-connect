@@ -34,7 +34,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.util.StringUtils;
-import org.springframework.vault.support.JsonMapFlattener;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,6 +50,7 @@ import pl.jalokim.propertiestojson.util.PropertiesToJsonConverter;
 import vn.sps.cdipp.kafkaconnect.application.builder.KafkaConsumerBuilder;
 import vn.sps.cdipp.kafkaconnect.application.builder.KafkaConsumerManager;
 import vn.sps.cdipp.kafkaconnect.application.handler.ResponseMessageHandler;
+import vn.sps.cdipp.kafkaconnect.application.utils.JsonMapFlattener;
 import vn.sps.cdipp.kafkaconnect.infrastructure.persistence.JobRepository;
 import vn.sps.cdipp.kafkaconnect.infrastructure.properties.KafkaTopicProperties;
 import vn.sps.cdipp.kafkaconnect.infrastructure.properties.PollerProperties;
@@ -158,11 +158,12 @@ public class PollerConfiguration {
             final String jobKeyAsString = String.valueOf(job.getKey());
             variablesAsMap.putIfAbsent("eventId", jobKeyAsString);
 
+            final Map<String, Object> flattenedVariablesAsMap = JsonMapFlattener.flatten(variablesAsMap);
+
             job.getCustomHeaders().forEach((key, value) -> {
-                variablesAsMap.put(key, detectDataType(value));
+                flattenedVariablesAsMap.put(key, detectDataType(value));
                 LOGGER.debug("Add value {} to path {} ", value, key);
             });
-            final Map<String, Object> flattenedVariablesAsMap = JsonMapFlattener.flatten(variablesAsMap);
             
             final String correlationKey = (String) variablesAsMap.get(pollerProperties.getCorrelationKey());
             final String topicPrefix = detectTopicPrefix(job.getElementId());
