@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.ZeebeClient;
 import vn.sps.cdipp.kafkaconnect.application.builder.KafkaConsumerManager;
 import vn.sps.cdipp.kafkaconnect.application.handler.DeploymentNotificationHandler;
+import vn.sps.cdipp.kafkaconnect.infrastructure.properties.Wrapper;
 
 @Configuration
 public class ProcessTriggerConfiguration {
@@ -39,21 +40,24 @@ public class ProcessTriggerConfiguration {
     private ZeebeClient zeebeClient;
 
     private AbstractBindingTargetFactory<? extends MessageChannel> targetFactory;
+    
+    private Wrapper wrapper;
 
     public ProcessTriggerConfiguration(ObjectMapper objectMapper, KafkaConsumerManager kafkaConsumerManager,
             BindingService bindingService, ZeebeClient zeebeClient,
-            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory) {
+            AbstractBindingTargetFactory<? extends MessageChannel> targetFactory, Wrapper wrapper) {
         super();
         this.objectMapper = objectMapper;
         this.kafkaConsumerManager = kafkaConsumerManager;
         this.bindingService = bindingService;
         this.zeebeClient = zeebeClient;
         this.targetFactory = targetFactory;
+        this.wrapper = wrapper;
     }
 
     @Bean
     public Consumer<JsonNode> deplopmentNotification() {
         return new DeploymentNotificationHandler(objectMapper, kafkaConsumerManager, bindingService, zeebeClient,
-            targetFactory);
+            targetFactory, wrapper);
     }
 }

@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHandler;
-import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,7 +35,7 @@ import vn.sps.cdipp.kafkaconnect.infrastructure.persistence.JobRepository;
 import vn.sps.cdipp.kafkaconnect.model.ActivatedJob;
 import vn.sps.cdipp.kafkaconnect.model.JobInfo;
 
-public class ResponseMessageHandler implements MessageHandler {
+public class ResponseMessageHandler extends AbstractMessageHandler implements MessageHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ResponseMessageHandler.class);
 
@@ -47,17 +46,14 @@ public class ResponseMessageHandler implements MessageHandler {
     private ZeebeClient client;
 
     private String correlationKey;
-    
-    private String responseWrapperKey;
 
     public ResponseMessageHandler(JobRepository jobRepository, ObjectMapper objectMapper, ZeebeClient client,
             String correlationKey, String responseWrapperKey) {
-        super();
+        super(responseWrapperKey);
         this.jobRepository = jobRepository;
         this.objectMapper = objectMapper;
         this.client = client;
         this.correlationKey = correlationKey;
-        this.responseWrapperKey = responseWrapperKey;
     }
 
     @Override
@@ -66,8 +62,8 @@ public class ResponseMessageHandler implements MessageHandler {
         String key = null;
         try {
             final JsonNode jsonNode = reader.readTree(new ByteArrayInputStream((byte[]) message.getPayload()));
+            key = jsonNode.get(correlationKey).asText();
             final ObjectNode objectNode = this.wrapResponseIfNecessary(jsonNode);
-            key = getKey(objectNode);
 
             final JobInfo jobInfo = jobRepository.getJob(key);
             this.validateJobInfo(jobInfo, key);
@@ -84,30 +80,6 @@ public class ResponseMessageHandler implements MessageHandler {
         catch (IOException | JobInstanceNotFoundException e) {
             LOGGER.error("Error while responding the message with key {}. Detail: ", key, e);
         }
-    }
-
-    private String getKey(final ObjectNode objectNode) {
-        String key;
-        if(StringUtils.hasText(responseWrapperKey)) {
-            key = objectNode.with(responseWrapperKey).get(correlationKey).asText();
-        }
-        else {
-            key = objectNode.get(correlationKey).asText();
-        }
-        return key;
-    }
-
-    private ObjectNode wrapResponseIfNecessary(final JsonNode jsonNode) {
-        final ObjectNode objectNode;
-        if(StringUtils.hasText(responseWrapperKey)) {
-            final ObjectMapper mapper = new ObjectMapper();
-            final ObjectNode root = mapper.createObjectNode();
-            objectNode = root.set(responseWrapperKey, jsonNode);
-        }
-        else {
-            objectNode = (ObjectNode) jsonNode;
-        }
-        return objectNode;
     }
 
     private void validateJobInfo(JobInfo jobInfo, String key) throws JobInstanceNotFoundException {
